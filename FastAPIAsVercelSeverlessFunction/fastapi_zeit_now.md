@@ -43,7 +43,51 @@
     └── test.db
 ```
 
+## READMEから得られた情報
+
++ FastAPIのアプリをVercel(Zeit) Serverless Functionとしてデプロイしている。
++ チュートリアルのデモンストレーション
++ 動かすことのできるデモのリンクが貼られている
+  + Open API Docs:
+  + API endpoints:
+
++ デプロイにあたっての注意事項
+  + FastAPIでは、全てのレスポンスについてno-cacheに設定された Cache-Control headerを返すように設定されている。静的キャッシュはZeitで自動的に行われるので、この例ではZeit CDNが何もキャッシュしないことを保証します。キャッシュの扱いは、公式Docを参照する。
+  + DBにsqliteを使っている
+    + サーバーレスデプロイの性質上、sqliteファイルは書き込めないので、DBを変更しようとするPOSTリクエストは失敗する。
+    + 本番環境では、FastAPIアプリは他の場所でホストされているデータベースに接続する。
+  + あくまでもZeitとの統合の一例。
+
++ レポジトリの背景
+  + ASGIに対応しているサーバレス関数のサービスがない/少ない or 設定がやや大変
+  + Vercel(Zeit) Nowなら開発・デプロイが簡単
+
+### 設定
+
++ now.json
++ pip installでrequirements.txtにあるパッケージをインストール
++ ルーティングの設定
+  + 一つの機能が複数のルートに対応する必要がある場合に、そのままだとうまく行かない
+
+```json
+  "routes": [
+    { "src": "/(.*)", "dest": "app/main.py" }
+  ]
+```
+
++ 関数の定義
+  + now.jsonのbuildsに設定を追加
+
+```json
+  "builds": [
+    { "src": "/app/main.py", "use": "@now/python" }
+  ]
+```
+
 ## 疑問点
+
++ 用語
+  + endpointとは?
 
 + レポジトリ作成者は、どこから情報を仕入れている?
   + FastAPI SQL Databases Tutorial
@@ -82,10 +126,14 @@
   + どのような項目をテストすればいい?
   + APIが実装されるまで、どのように対処している?
     + Mockのようなものがある?
+  + Zeit Asynchronous Server Gateway Interface (ASGI)とは?
+  + Zeit CDNとは?
 
 + Vercel
   + 無料枠でできることに制約はないか?
   + 2020年4月時点からの変更点は?
+  + DBは、sqlite以外も使える?
+  + サーバレスデプロイだとPOSTリクエストが使えない?
 
 + Dockerコンテナ
   + 権限周りの設定方法は?
