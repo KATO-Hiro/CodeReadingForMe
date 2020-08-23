@@ -91,6 +91,7 @@
 
 + レポジトリ作成者は、どこから情報を仕入れている?
   + FastAPI SQL Databases Tutorial
+  + FastAPIおよびVercelの公式Doc、GitHubのIssues
 
 + FastAPI
   + 標準的なディレクトリ構成は?
@@ -102,6 +103,7 @@
     + RDB or RDB以外?
   + テストフレームワークは何を使っている?
     + Pytestが使えると嬉しい
+    + A: 該当レポジトリでは、未使用
   + APIのテストは、何を確認することが大事?
   + 著名なOSSプロジェクトはある?
 
