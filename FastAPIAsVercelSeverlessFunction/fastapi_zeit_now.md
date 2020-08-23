@@ -25,7 +25,23 @@
 
 + 小目標: Fast APIのappをVercelにデプロイできるようにする。
 
-## 項目
+## ディレクトリ・ファイル構造
+
+```md
+.
+├── README.md
+├── app
+│   ├── __init__.py
+│   ├── crud.py
+│   ├── database.py
+│   ├── main.py
+│   ├── models.py
+│   └── schemas.py
+├── now.json
+├── requirements.txt
+└── tmp
+    └── test.db
+```
 
 ## 疑問点
 
