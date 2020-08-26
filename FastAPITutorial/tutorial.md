@@ -181,6 +181,88 @@ async def root():
 # 開発サーバを起動・リロードする
 ```
 
+## Path Parameters
+
+```py
+from fastapi import FastAPI
+
+app = FastAPI()
+
+# パスのパラメータや変数は、Pythonの形式と同じシンタックス
+# パスパラメータのitemd_idは、関数内でitem_id変数として扱われる
+@app.get("/items/{item_id}")
+async def read_item(item_id):
+    return {"item_id": item_id}
+```
+
+http://127.0.0.1:8000/items/fooにアクセスすると、
+
+```json
+{"item_id":"foo"}
+```
+
+### Path parameters with types
+
++ Pythonのtype annotationsを使うことで、パスパラメータの型を宣言できる
+
+```py
+from fastapi import FastAPI
+
+app = FastAPI()
+
+#
+# パスパラメータは、宣言した型に自動で変換される
+@app.get("/items/{item_id}")
+async def read_item(item_id: int):
+    return {"item_id": item_id}
+```
+
+ http://127.0.0.1:8000/items/3にアクセス
+
+```json
+{"item_id":3}
+```
+
+### Data validation
+
+http://127.0.0.1:8000/items/fooやhttp://127.0.0.1:8000/items/4.2にアクセスすると、
+
+エラーの内容が表示される
+
+```json
+{
+    "detail": [
+        {
+            "loc": [
+                "path",
+                "item_id"
+            ],
+            "msg": "value is not a valid integer",
+            "type": "type_error.integer"
+        }
+    ]
+}
+```
+
+### Documentation
+
++ http://127.0.0.1:8000/docsにアクセス
++ Try it outで、パラメータを入力してレスポンスを確認できる
+  + 指定した型以外の入力をしようとすると、その時点で入力が正しくないというメッセージとともに、再入力を促される
+
+### Pydantic
+
++ データのバリデーションを裏で実行してくれているので、開発時はその存在を意識しなくて済む
+
+### Recap
+
++ Pythonの型宣言による効果により、一度の定義すれば以下の効果が得られる
+  + エディタのサポート
+  + データのパース
+  + バリデーション
+  + APIアノテーション、自動ドキュメント
++ intuitive: 直感的
+
 ## 疑問点
 
 + Swagger UIとは?
