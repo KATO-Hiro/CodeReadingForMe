@@ -254,6 +254,90 @@ http://127.0.0.1:8000/items/fooやhttp://127.0.0.1:8000/items/4.2にアクセス
 
 + データのバリデーションを裏で実行してくれているので、開発時はその存在を意識しなくて済む
 
+### Order matters
+
+```py
+from fastapi import FastAPI
+
+app = FastAPI()
+
+
+# パスは、順番に評価される
+# 逆にすると、meが{user_id}に入る
+@app.get("/users/me")
+async def read_user_me():
+    return {"user_id": "the current user"}
+
+
+@app.get("/users/{user_id}")
+async def read_user(user_id: str):
+    return {"user_id": user_id}
+```
+
+### Predefined values
+
++ 有効なパスパラメータを事前に定義しておくこともできる
+
+```py
+# EnumをImport
+from enum import Enum
+
+from fastapi import FastAPI
+
+
+# str, Enumを継承する
+class ModelName(str, Enum):
+    alexnet = "alexnet"
+    resnet = "resnet"
+    lenet = "lenet"
+
+
+app = FastAPI()
+
+
+# 引数の型に自作のクラスを取ることもできる
+@app.get("/model/{model_name}")
+async def get_model(model_name: ModelName):
+    # ClassName.attrの形式で利用できる
+    if model_name == ModelName.alexnet:
+        # 戻り値にmodel_nameを取ることもできる
+        return {"model_name": model_name, "message": "Deep Learning FTW!"}
+
+    # model_name.value == 'hoge'の形式も利用できる
+    if model_name.value == "lenet":
+        return {"model_name": model_name, "message": "LeCNN all the images"}
+
+    return {"model_name": model_name, "message": "Have some residuals"}
+```
+
+### Path parameters containing paths
+
++ /files/{file_path}
+  + 例: file_pathにhome/johndoe/myfile.txtのようなパスを含む場合は、URLを/files/home/johndoe/myfile.txtとする
+
++ OpenAPIでは上記のような書き方をサポートしていないが、Starletteの内部ツールを使うことで利用できる
+  + /docsも特別に何かしなくても動作する
+
+### Path convertor
+
+```md
+file_pathがパラメータの名前で、:pathにパスが対応している
+/files/{file_path:path}
+```
+
+```py
+from fastapi import FastAPI
+
+app = FastAPI()
+
+
+# Note: パラメータは/home/johndoe/myfile.txtのように、先頭にスラッシュ(/)を入れる
+# /files//home/johndoe/myfile.txt
+@app.get("/files/{file_path:path}")
+async def read_file(file_path: str):
+    return {"file_path": file_path}
+```
+
 ### Recap
 
 + Pythonの型宣言による効果により、一度の定義すれば以下の効果が得られる
