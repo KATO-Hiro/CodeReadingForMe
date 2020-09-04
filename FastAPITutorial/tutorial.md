@@ -347,6 +347,32 @@ async def read_file(file_path: str):
   + APIアノテーション、自動ドキュメント
 + intuitive: 直感的
 
+## Query Parameters
+
++ 宣言したパラメータが、パスパラメータではないとき自動的に「クエリパラメータ」になる
+
+```py
+from fastapi import FastAPI
+
+app = FastAPI()
+
+fake_items_db = [{"item_name": "Foo"}, {"item_name": "Bar"}, {"item_name": "Baz"}]
+
+
+@app.get("/items/")
+async def read_item(skip: int = 0, limit: int = 10):
+    return fake_items_db[skip : skip + limit]
+```
+
+```md
+// ?の後に、kye-valueのペアで
+// &で区別する
+// skipの値が0、limitの値が10であることを表す
+// limitで取り出すデータの数を指定
+// 元々は文字列だが、Pythonのデータ型に変換される
+http://127.0.0.1:8000/items/?skip=0&limit=10
+```
+
 ## 疑問点
 
 + Swagger UIとは?
