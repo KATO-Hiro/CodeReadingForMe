@@ -370,6 +370,7 @@ async def read_item(skip: int = 0, limit: int = 10):
 // skipの値が0、limitの値が10であることを表す
 // limitで取り出すデータの数を指定
 // 元々は文字列だが、Pythonのデータ型に変換される
+// クエリパラメータを指定しない場合は、デフォルト値が設定される
 http://127.0.0.1:8000/items/?skip=0&limit=10
 ```
 
