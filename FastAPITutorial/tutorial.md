@@ -785,6 +785,17 @@ async def read_items(q: Optional[List[str]] = Query(None)):
   + description
   + deprecated: バラメータを廃止することを明示
 
+## Path Parameters and Numeric Validations
+
++ PathパラメータもQueryと同様に、型の検証とメタデータの定義ができる
+
+### Recap
+
++ gt: greater than
++ ge: greater than or equal
++ lt: less than
++ le: less than or equal
+
 ## 疑問点
 
 + CRUDの書き方は?
