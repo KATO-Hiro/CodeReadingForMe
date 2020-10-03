@@ -834,6 +834,12 @@ async def read_items(q: Optional[List[str]] = Query(None)):
 
 + Query, Path, Cookieと同様。
 
+## Response Model
+
++ @app.xxxで、指定
++ モデルを別途作成し、レスポンスに含めない情報を指定できる
+  + 例: パスワード
+
 ## 疑問点
 
 + CRUDの書き方は?
