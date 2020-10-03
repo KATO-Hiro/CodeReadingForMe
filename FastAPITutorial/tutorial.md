@@ -955,6 +955,10 @@ async def read_item(item_id: str):
 + Dependency Injection
   + 依存関係にあるものを切り出して再利用できる
 
+## Classes as Dependencies
+
++ 依存関係をクラスとして表現することもできる
+
 ## 疑問点
 
 + CRUDの書き方は?
