@@ -804,6 +804,13 @@ async def read_items(q: Optional[List[str]] = Query(None)):
 
 + Pydantic's Fieldを使うことで、Pydantic modelの内部の検証とメタデータが定義できる
 
+## Body - Nested Models
+
++ Pydanticにより、ネストしたモデルを利用することができる。
+  + 任意の階層を定義できる
++ List, Setが利用できる
++ 自作のクラスを属性に指定することもできる
+
 ## 疑問点
 
 + CRUDの書き方は?
