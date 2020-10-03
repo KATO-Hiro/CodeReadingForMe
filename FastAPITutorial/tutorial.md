@@ -42,11 +42,15 @@ pip install uvicorn
 ```py
 # 最もシンプルな例
 # main.py
+# FastAPIをインポート
 from fastapi import FastAPI
 
+# インスタンスを作成
 app = FastAPI()
 
 
+# デコレータで、HTTPメソッドとルーティングを指定
+# 関数を定義して、値を返す
 @app.get("/")
 async def root():
     return {"message": "Hello World"}
@@ -150,6 +154,7 @@ app = FastAPI()
 # Path: /
 # HTTPプロトコルのうち、GETメソッドを使っている
 # デコレータを使って、該当するメソッドに追加するだけ
+# 作成した@インスタンス名.HTTPプロトコルのメソッド("パス")
 @app.get("/")
 async def root():
     return {"message": "Hello World"}
@@ -157,8 +162,8 @@ async def root():
 # 他のメソッドも、@app.xxx()という形式でサポートされている
 # FastAPIにおいて、各メソッドの利用に特定の意味を持たせることはしていない
 # 例: GraphQLでは、POSTしか使わないのが通例
-@app.post()
-@app.put()
+@app.post() # to create data
+@app.put() # to update data
 @app.delete()
 ```
 
@@ -347,12 +352,636 @@ async def read_file(file_path: str):
   + APIアノテーション、自動ドキュメント
 + intuitive: 直感的
 
+## Query Parameters
+
++ 宣言したパラメータが、パスパラメータではないとき自動的に「クエリパラメータ」になる
+
+```py
+from fastapi import FastAPI
+
+app = FastAPI()
+
+fake_items_db = [{"item_name": "Foo"}, {"item_name": "Bar"}, {"item_name": "Baz"}]
+
+
+@app.get("/items/")
+async def read_item(skip: int = 0, limit: int = 10):
+    return fake_items_db[skip : skip + limit]
+```
+
+```md
+// ?の後に、kye-valueのペアで
+// &で区別する
+// skipの値が0、limitの値が10であることを表す
+// limitで取り出すデータの数を指定
+// 元々は文字列だが、Pythonのデータ型に変換される
+// クエリパラメータを指定しない場合は、デフォルト値が設定される(一部のパラメータだけ指定して、上書きすることも可能)
+http://127.0.0.1:8000/items/?skip=0&limit=10
+```
+
+### Optional parameters
+
+```py
+from typing import Optional
+
+from fastapi import FastAPI
+
+app = FastAPI()
+
+
+# Optionalを使って、デフォルト値をNoneに指定することもできる
+@app.get("/items/{item_id}")
+async def read_item(item_id: str, q: Optional[str] = None):
+    if q:
+        return {"item_id": item_id, "q": q}
+    return {"item_id": item_id}
+```
+
+### Query parameter type conversion
+
++ bool型も定義できる
+
+```py
+from typing import Optional
+
+from fastapi import FastAPI
+
+app = FastAPI()
+
+
+@app.get("/items/{item_id}")
+async def read_item(item_id: str, q: Optional[str] = None, short: bool = False):
+    item = {"item_id": item_id}
+    if q:
+        item.update({"q": q})
+    if not short:
+        item.update(
+            {"description": "This is an amazing item that has a long description"}
+        )
+    return item
+```
+
+```md
+http://127.0.0.1:8000/items/foo?short=True
+
+Trueの部分が、1, true, on, yesでもTrueと判定される
+それ以外は、False
+```
+
+### Multiple path and query parameters
+
++ 複数のパス、クエリパラメータを定義することもできる
+  + 順序の指定はない
+
+```py
+from typing import Optional
+
+from fastapi import FastAPI
+
+app = FastAPI()
+
+
+@app.get("/users/{user_id}/items/{item_id}")
+async def read_user_item(
+    user_id: int, item_id: str, q: Optional[str] = None, short: bool = False
+):
+    item = {"item_id": item_id, "owner_id": user_id}
+    if q:
+        item.update({"q": q})
+    if not short:
+        item.update(
+            {"description": "This is an amazing item that has a long description"}
+        )
+    return item
+```
+
+### Required query parameters
+
++ クエリパラメータの指定を強制することもできる
+
+```py
+from fastapi import FastAPI
+
+app = FastAPI()
+
+
+@app.get("/items/{item_id}")
+async def read_user_item(item_id: str, needy: str):
+    item = {"item_id": item_id, "needy": needy}
+    return item
+```
+
+```md
+// needyが指定されていないため、エラーが発生する
+http://127.0.0.1:8000/items/foo-item
+
+// クエリパラメータを指定することで動作
+http://127.0.0.1:8000/items/foo-item?needy=sooooneedy
+```
+
+```py
+from typing import Optional
+
+from fastapi import FastAPI
+
+app = FastAPI()
+
+
+# クエリパラメータにデフォルト値や任意の値を指定することもできる
+# needy: 必須
+# skip: int型。デフォルト値が0
+# limit: int型。任意の値。
+@app.get("/items/{item_id}")
+async def read_user_item(
+    item_id: str, needy: str, skip: int = 0, limit: Optional[int] = None
+):
+    item = {"item_id": item_id, "needy": needy, "skip": skip, "limit": limit}
+    return item
+
+# Note: パスパラメータと同様に、Enumを使うこともできる
+```
+
+## Request Body
+
++ client(browser)とのやり取りで使用
+  + API側: ほぼ必須
+  + clients側: いつも必要ではない
+
+  + POSTメソッドを使うのが一般的
+
+```py
+# 1. BaseModelをpydanticからインポート
+# 2. データモデルを作成
+from typing import Optional
+
+from fastapi import FastAPI
+from pydantic import BaseModel
+
+
+# BaseModelを継承
+# 属性: 型を指定
+# デフォルト値を設定することもできる
+class Item(BaseModel):
+    name: str
+    description: Optional[str] = None
+    price: float
+    tax: Optional[float] = None
+
+
+app = FastAPI()
+
+
+# 関数の引数がスッキリして見やすい
+@app.post("/items/")
+async def create_item(item: Item):
+    return item
+```
+
+```md
+// 処理の流れ
+・リクエストの本体をJSONとして読む
+・必要に応じて、対応する型に変換する
+・データの検証
+・Itemのパラメータを受け取る
+・JSONスキーマを生成
+・これらがOpenAPIスキーマを生成、自動的にドキュメント化
+
+// SchemasにItemモデルが追加されている
+```
+
+### Use the model
+
+```py
+from typing import Optional
+
+from fastapi import FastAPI
+from pydantic import BaseModel
+
+
+class Item(BaseModel):
+    name: str
+    description: Optional[str] = None
+    price: float
+    tax: Optional[float] = None
+
+
+app = FastAPI()
+
+
+# モデルのアクセス方法
+# モデル名.属性
+@app.post("/items/")
+async def create_item(item: Item):
+    item_dict = item.dict()
+    if item.tax:
+        price_with_tax = item.price + item.tax
+        item_dict.update({"price_with_tax": price_with_tax})
+    return item_dict
+```
+
+### Request body + path parameters
+
++ 上記は同時に定義できる
+  + パスパラメータは自動的に判別してくれる
+
+```py
+from typing import Optional
+
+from fastapi import FastAPI
+from pydantic import BaseModel
+
+
+class Item(BaseModel):
+    name: str
+    description: Optional[str] = None
+    price: float
+    tax: Optional[float] = None
+
+
+app = FastAPI()
+
+
+@app.put("/items/{item_id}")
+async def create_item(item_id: int, item: Item):
+    return {"item_id": item_id, **item.dict()}
+```
+
+### Request body + path + query parameters
+
++ 上記全てを同時に宣言することもできる
+
+```py
+from typing import Optional
+
+from fastapi import FastAPI
+from pydantic import BaseModel
+
+
+class Item(BaseModel):
+    name: str
+    description: Optional[str] = None
+    price: float
+    tax: Optional[float] = None
+
+
+app = FastAPI()
+
+
+@app.put("/items/{item_id}")
+async def create_item(item_id: int, item: Item, q: Optional[str] = None):
+    result = {"item_id": item_id, **item.dict()}
+    if q:
+        result.update({"q": q})
+    return result
+```
+
+## Query Parameters and String Validations
+
++ 追加の情報の定義やパラメータの検証
+
+```py
+from typing import Optional
+
+from fastapi import FastAPI
+
+app = FastAPI()
+
+
+@app.get("/items/")
+async def read_items(q: Optional[str] = None):
+    results = {"items": [{"item_id": "Foo"}, {"item_id": "Bar"}]}
+    if q:
+        results.update({"q": q})
+    return results
+```
+
+### Additional validation
+
+```py
+from typing import Optional
+
+# Queryをインポート
+from fastapi import FastAPI, Query
+
+app = FastAPI()
+
+
+# Query(デフォルト値, max_length=50)
+# 50文字まではOKな例
+@app.get("/items/")
+async def read_items(q: Optional[str] = Query(None, max_length=50)):
+    results = {"items": [{"item_id": "Foo"}, {"item_id": "Bar"}]}
+    if q:
+        results.update({"q": q})
+    return results
+```
+
+### Add more validations
+
++ 文字の最小値も指定できる
+  + min_length=xx
+
+```py
+from typing import Optional
+
+from fastapi import FastAPI, Query
+
+app = FastAPI()
+
+
+@app.get("/items/")
+async def read_items(q: Optional[str] = Query(None, min_length=3, max_length=50)):
+    results = {"items": [{"item_id": "Foo"}, {"item_id": "Bar"}]}
+    if q:
+        results.update({"q": q})
+    return results
+```
+
+### Add regular expressions
+
++ 正規表現も利用できる
+  + regex="^fixedquery$"で指定
+  + ""の中身は、^で開始、fixedqueryで正確な表現を指定、$で終了
+
+```py
+from typing import Optional
+
+from fastapi import FastAPI, Query
+
+app = FastAPI()
+
+
+@app.get("/items/")
+async def read_items(
+    q: Optional[str] = Query(None, min_length=3, max_length=50, regex="^fixedquery$")
+):
+    results = {"items": [{"item_id": "Foo"}, {"item_id": "Bar"}]}
+    if q:
+        results.update({"q": q})
+    return results
+```
+
+### Default values
+
++ Queryの第1引数にデフォルト値を設定できる
+
+```py
+from fastapi import FastAPI, Query
+
+app = FastAPI()
+
+
+@app.get("/items/")
+async def read_items(q: str = Query("fixedquery", min_length=3)):
+    results = {"items": [{"item_id": "Foo"}, {"item_id": "Bar"}]}
+    if q:
+        results.update({"q": q})
+    return results
+```
+
+### Make it required
+
++ パラメータを必須にすることもできる
+  + Queryの第1引数に...を指定
+
+```py
+from fastapi import FastAPI, Query
+
+app = FastAPI()
+
+
+@app.get("/items/")
+async def read_items(q: str = Query(..., min_length=3)):
+    results = {"items": [{"item_id": "Foo"}, {"item_id": "Bar"}]}
+    if q:
+        results.update({"q": q})
+    return results
+```
+
+### Query parameter list / multiple values
+
++ クエリパラメータを複数指定することもできる
+
+```py
+from typing import List, Optional
+
+from fastapi import FastAPI, Query
+
+app = FastAPI()
+
+
+# Optional[List[str]] = Query()で指定
+@app.get("/items/")
+async def read_items(q: Optional[List[str]] = Query(None)):
+    query_items = {"q": q}
+    return query_items
+```
+
+### Recap
+
++ 一般的なバリデーションとメタデータ
+  + alias: Pythonで有効ではない変数名をパラメータとして使うときの別名を指定できる
+  + title:
+  + description
+  + deprecated: バラメータを廃止することを明示
+
+## Path Parameters and Numeric Validations
+
++ PathパラメータもQueryと同様に、型の検証とメタデータの定義ができる
+
+### Recap
+
++ gt: greater than
++ ge: greater than or equal
++ lt: less than
++ le: less than or equal
+
+## Body - Multiple Parameters
+
++ PathとQueryを組み合わることもできる
+
+## Body - Fields
+
++ Pydantic's Fieldを使うことで、Pydantic modelの内部の検証とメタデータが定義できる
+
+## Body - Nested Models
+
++ Pydanticにより、ネストしたモデルを利用することができる。
+  + 任意の階層を定義できる
++ List, Setが利用できる
++ 自作のクラスを属性に指定することもできる
+
+## Schema Extra - Example
+
++ JSONスキーマに追加の情報を定義することもできる
+  + 一般的な例として、サンプル情報
+
+## Extra Data Types
+
++ 複雑なデータ型もサポートされている
+  + UUID: Universally Unique Identifier
+  + datetime.xxx
+  + frozenset
+  + bytes
+  + Decimal
++ 一覧は、Pydantic data typesを参照
+
+## Cookie Parameters
+
++ QueryやPathパラメータと同様に定義できる
+
+## Header Parameters
+
++ Query, Path, Cookieと同様。
+
+## Response Model
+
++ @app.xxxで、指定
++ モデルを別途作成し、レスポンスに含めない情報を指定できる
+  + 例: パスワード
+
+## Extra Models
+
++ 継承を使って、重複をなくす。ただし、一つの状態しかないエンティティをあえて分割する必要はない
++ 例:
+  + Userモデル(基本モデル)
+  + パスワードあり
+  + パスワードなし
+  + ハッシュ化したパスワード(DB保存用)
+
+## Response Status Code
+
++ HTTPのstatus codeを明示的に指定できる
++ fastapi.statusを使うことで、より明確に示せる
+
+```py
+from fastapi import FastAPI
+
+app = FastAPI()
+
+
+@app.post("/items/", status_code=201)
+async def create_item(name: str):
+    return {"name": name}
+```
+
+```py
+from fastapi import FastAPI, status
+
+app = FastAPI()
+
+
+@app.post("/items/", status_code=status.HTTP_201_CREATED)
+async def create_item(name: str):
+    return {"name": name}
+```
+
+## Form Data
+
++ フィールドからデータを受け取るときは、フォームを使う
+
+```terminal
+// 事前にインストールが必要
+pip install python-multipart
+```
+
+## Import File
+
++ ファイルをアップロードすることができる
+
+## Request Forms and Files
+
++ FormとFileアップロードは組み合わせることもできる
+
+## Handling Errors
+
+### Use HTTPExceptionを使うケース
+
+```py
+# HTTPExceptionをインポート
+from fastapi import FastAPI, HTTPException
+
+app = FastAPI()
+
+items = {"foo": "The Foo Wrestlers"}
+
+
+@app.get("/items/{item_id}")
+async def read_item(item_id: str):
+    if item_id not in items:
+        # 例外を発生させる
+        # 例: IDが見つからない場合
+        raise HTTPException(status_code=404, detail="Item not found")
+    return {"item": items[item_id]}
+```
+
++ custom headersを追加することもできる
++ custom exception handlersも追加できる
++ default exception handlerを上書きできる
+
+## Path Operation Configuration
+
++ 注: path operation decoratorに直接渡される
+
+### Tags
+
++ tagsで、パスの区分をドキュメントに反映させる
+
+### Summary and description
+
++ APIの要約と説明を追加できる
+
+### Description from docstring
+
++ MarkDown形式で、docstringを利用した記述ができる
+
+### Response description
+
++ レスポンスの説明を追加できる
+
+## JSON Compatible Encoder
+
++ JSONの互換性のある形式に変換するときは、jsonable_encoder()を使う
+  + 例: DBに保存する
+
+## Body - Updates
+
+### PUTメソッドを使って置き換える
+
+### PATCHメソッドで部分的に更新する
+
 ## 疑問点
+
++ CRUDの書き方は?
+
++ 管理者アカウントは楽に作れる?
+
++ データを保存する方法は?
+  + MySQL
+  + Firebase
+
++ Vercelにデプロイできる?
+
++ CORS対策は?
+
++ mypyによる型チェックに対応している?
+  + Yes
+
++ Pydanticとは?
+
++ Pytestは使える?
+
++ 標準的なディレクトリ構成は?
+  + APIとテストは分離している?
+  + APIについても、機能ごとに分けることは可能?
+
++ Pythonにおける`async`の使いどころとは?
 
 + Swagger UIとは?
 + ReDocとは?
 + Swagger UIとReDocの違いは?なぜ2つある?
 + OpenAPIのメリットがイマイチ分かっていない
++ Cookie Parametersの使いどころとは?
 
 + 。
 
