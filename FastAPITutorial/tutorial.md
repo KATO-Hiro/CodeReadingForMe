@@ -811,6 +811,11 @@ async def read_items(q: Optional[List[str]] = Query(None)):
 + List, Setが利用できる
 + 自作のクラスを属性に指定することもできる
 
+## Schema Extra - Example
+
++ JSONスキーマに追加の情報を定義することもできる
+  + 一般的な例として、サンプル情報
+
 ## 疑問点
 
 + CRUDの書き方は?
