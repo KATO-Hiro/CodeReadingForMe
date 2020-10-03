@@ -1036,6 +1036,62 @@ async def get_db():
 
 + ミドルウェア: 特定の操作によって処理される前の全てのリクエストに対して動作する関数。全てのレスポンスを処理してから返す。
 
+## CORS (Cross-Origin Resource Sharing)
+
++ ブラウザ上で動作するフロントエンドがバックエンドと通信するJavaScriptコードを持っていて、バックエンドがフロントエンドとは異なる「オリジン」にある場合の状況を指す
+
+### Origin
+
++ プロトコル(http, https)、ドメイン(xxx.com, localhost,localhost.xxx.com)、ポート(80, 443, 8080)で構成される
+
++ 以下は全て違うオリジンと見なされる
+  http://localhost
+  https://localhost
+  http://localhost:8080
+
+### 手順
+
++ バックエンドで、"allowed origins"のリストを用意する必要がある
+
+### Wildcards
+
++ 上記のリストを定義するときには、ワイルドカードが利用できる
+
+### Use CORSMiddleware
+
+```py
+from fastapi import FastAPI
+# 1. CORSMiddlewareをインポート
+from fastapi.middleware.cors import CORSMiddleware
+
+app = FastAPI()
+
+# 2. 許可するoriginを文字列のリストで作成
+origins = [
+    "http://localhost.tiangolo.com",
+    "https://localhost.tiangolo.com",
+    "http://localhost",
+    "http://localhost:8080",
+]
+
+# 3. middlewareとして追加
+# いくつかのオプションを指定できる
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+@app.get("/")
+async def main():
+    return {"message": "Hello World"}
+```
+
++ 詳しくは、Moziilaのドキュメントを参照する
+
 ## 疑問点
 
 + CRUDの書き方は?
