@@ -959,6 +959,10 @@ async def read_item(item_id: str):
 
 + 依存関係をクラスとして表現することもできる
 
+## Sub-dependencies
+
++ 依存関係を入れ子にすることもできる
+
 ## 疑問点
 
 + CRUDの書き方は?
