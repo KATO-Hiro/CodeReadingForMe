@@ -876,6 +876,15 @@ async def create_item(name: str):
     return {"name": name}
 ```
 
+## Form Data
+
++ フィールドからデータを受け取るときは、フォームを使う
+
+```terminal
+// 事前にインストールが必要
+pip install python-multipart
+```
+
 ## 疑問点
 
 + CRUDの書き方は?
