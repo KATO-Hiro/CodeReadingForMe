@@ -830,6 +830,10 @@ async def read_items(q: Optional[List[str]] = Query(None)):
 
 + QueryやPathパラメータと同様に定義できる
 
+## Header Parameters
+
++ Query, Path, Cookieと同様。
+
 ## 疑問点
 
 + CRUDの書き方は?
