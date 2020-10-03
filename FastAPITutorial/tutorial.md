@@ -967,6 +967,20 @@ async def read_item(item_id: str):
 
 + 依存関係にあるものに、戻り値が含まれていない場合にも対処できる
 
+## Dependencies with yield
+
++ 操作の実行後に必要な手順を含む依存関係についてもサポート
+
+```py
+# DBを開く&確実に閉じる
+async def get_db():
+    db = DBSession()
+    try:
+        yield db
+    finally:
+        db.close()
+```
+
 ## 疑問点
 
 + CRUDの書き方は?
@@ -1001,6 +1015,8 @@ async def read_item(item_id: str):
 + Swagger UIとReDocの違いは?なぜ2つある?
 + OpenAPIのメリットがイマイチ分かっていない
 + Cookie Parametersの使いどころとは?
+
++ yieldの使い所は?
 
 + 。
 
