@@ -816,6 +816,16 @@ async def read_items(q: Optional[List[str]] = Query(None)):
 + JSONスキーマに追加の情報を定義することもできる
   + 一般的な例として、サンプル情報
 
+## Extra Data Types
+
++ 複雑なデータ型もサポートされている
+  + UUID: Universally Unique Identifier
+  + datetime.xxx
+  + frozenset
+  + bytes
+  + Decimal
++ 一覧は、Pydantic data typesを参照
+
 ## 疑問点
 
 + CRUDの書き方は?
