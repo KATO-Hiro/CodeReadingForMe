@@ -1028,6 +1028,10 @@ async def get_db():
 + 基本的な実装方法を解説
 + まだ、セキュアではない
 
+## OAuth2 with Password (and hashing), Bearer with JWT tokens
+
++ JWTトークンとセキュアなパスワードのハッシュ化を利用して、セキュアなappに
+
 ## 疑問点
 
 + CRUDの書き方は?
