@@ -42,11 +42,15 @@ pip install uvicorn
 ```py
 # 最もシンプルな例
 # main.py
+# FastAPIをインポート
 from fastapi import FastAPI
 
+# インスタンスを作成
 app = FastAPI()
 
 
+# デコレータで、HTTPメソッドとルーティングを指定
+# 関数を定義して、値を返す
 @app.get("/")
 async def root():
     return {"message": "Hello World"}
@@ -150,6 +154,7 @@ app = FastAPI()
 # Path: /
 # HTTPプロトコルのうち、GETメソッドを使っている
 # デコレータを使って、該当するメソッドに追加するだけ
+# 作成した@インスタンス名.HTTPプロトコルのメソッド("パス")
 @app.get("/")
 async def root():
     return {"message": "Hello World"}
@@ -157,8 +162,8 @@ async def root():
 # 他のメソッドも、@app.xxx()という形式でサポートされている
 # FastAPIにおいて、各メソッドの利用に特定の意味を持たせることはしていない
 # 例: GraphQLでは、POSTしか使わないのが通例
-@app.post()
-@app.put()
+@app.post() # to create data
+@app.put() # to update data
 @app.delete()
 ```
 
@@ -370,11 +375,158 @@ async def read_item(skip: int = 0, limit: int = 10):
 // skipの値が0、limitの値が10であることを表す
 // limitで取り出すデータの数を指定
 // 元々は文字列だが、Pythonのデータ型に変換される
-// クエリパラメータを指定しない場合は、デフォルト値が設定される
+// クエリパラメータを指定しない場合は、デフォルト値が設定される(一部のパラメータだけ指定して、上書きすることも可能)
 http://127.0.0.1:8000/items/?skip=0&limit=10
 ```
 
+### Optional parameters
+
+```py
+from typing import Optional
+
+from fastapi import FastAPI
+
+app = FastAPI()
+
+
+# Optionalを使って、デフォルト値をNoneに指定することもできる
+@app.get("/items/{item_id}")
+async def read_item(item_id: str, q: Optional[str] = None):
+    if q:
+        return {"item_id": item_id, "q": q}
+    return {"item_id": item_id}
+```
+
+### Query parameter type conversion
+
++ bool型も定義できる
+
+```py
+from typing import Optional
+
+from fastapi import FastAPI
+
+app = FastAPI()
+
+
+@app.get("/items/{item_id}")
+async def read_item(item_id: str, q: Optional[str] = None, short: bool = False):
+    item = {"item_id": item_id}
+    if q:
+        item.update({"q": q})
+    if not short:
+        item.update(
+            {"description": "This is an amazing item that has a long description"}
+        )
+    return item
+```
+
+```md
+http://127.0.0.1:8000/items/foo?short=True
+
+Trueの部分が、1, true, on, yesでもTrueと判定される
+それ以外は、False
+```
+
+### Multiple path and query parameters
+
++ 複数のパス、クエリパラメータを定義することもできる
+  + 順序の指定はない
+
+```py
+from typing import Optional
+
+from fastapi import FastAPI
+
+app = FastAPI()
+
+
+@app.get("/users/{user_id}/items/{item_id}")
+async def read_user_item(
+    user_id: int, item_id: str, q: Optional[str] = None, short: bool = False
+):
+    item = {"item_id": item_id, "owner_id": user_id}
+    if q:
+        item.update({"q": q})
+    if not short:
+        item.update(
+            {"description": "This is an amazing item that has a long description"}
+        )
+    return item
+```
+
+### Required query parameters
+
++ クエリパラメータの指定を強制することもできる
+
+```py
+from fastapi import FastAPI
+
+app = FastAPI()
+
+
+@app.get("/items/{item_id}")
+async def read_user_item(item_id: str, needy: str):
+    item = {"item_id": item_id, "needy": needy}
+    return item
+```
+
+```md
+// needyが指定されていないため、エラーが発生する
+http://127.0.0.1:8000/items/foo-item
+
+// クエリパラメータを指定することで動作
+http://127.0.0.1:8000/items/foo-item?needy=sooooneedy
+```
+
+```py
+from typing import Optional
+
+from fastapi import FastAPI
+
+app = FastAPI()
+
+
+# クエリパラメータにデフォルト値や任意の値を指定することもできる
+# needy: 必須
+# skip: int型。デフォルト値が0
+# limit: int型。任意の値。
+@app.get("/items/{item_id}")
+async def read_user_item(
+    item_id: str, needy: str, skip: int = 0, limit: Optional[int] = None
+):
+    item = {"item_id": item_id, "needy": needy, "skip": skip, "limit": limit}
+    return item
+
+# Note: パスパラメータと同様に、Enumを使うこともできる
+```
+
 ## 疑問点
+
++ CRUDの書き方は?
+
++ 管理者アカウントは楽に作れる?
+
++ データを保存する方法は?
+  + MySQL
+  + Firebase
+
++ Vercelにデプロイできる?
+
++ CORS対策は?
+
++ mypyによる型チェックに対応している?
+  + Yes
+
++ Pydanticとは?
+
++ Pytestは使える?
+
++ 標準的なディレクトリ構成は?
+  + APIとテストは分離している?
+  + APIについても、機能ごとに分けることは可能?
+
++ Pythonにおける`async`の使いどころとは?
 
 + Swagger UIとは?
 + ReDocとは?
