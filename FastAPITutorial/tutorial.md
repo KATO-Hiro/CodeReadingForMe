@@ -849,6 +849,33 @@ async def read_items(q: Optional[List[str]] = Query(None)):
   + パスワードなし
   + ハッシュ化したパスワード(DB保存用)
 
+## Response Status Code
+
++ HTTPのstatus codeを明示的に指定できる
++ fastapi.statusを使うことで、より明確に示せる
+
+```py
+from fastapi import FastAPI
+
+app = FastAPI()
+
+
+@app.post("/items/", status_code=201)
+async def create_item(name: str):
+    return {"name": name}
+```
+
+```py
+from fastapi import FastAPI, status
+
+app = FastAPI()
+
+
+@app.post("/items/", status_code=status.HTTP_201_CREATED)
+async def create_item(name: str):
+    return {"name": name}
+```
+
 ## 疑問点
 
 + CRUDの書き方は?
