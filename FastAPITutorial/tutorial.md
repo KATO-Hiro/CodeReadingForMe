@@ -950,9 +950,16 @@ async def read_item(item_id: str):
 
 ### PATCHメソッドで部分的に更新する
 
+## Dependencies - First Steps
+
++ Dependency Injection
+  + 依存関係にあるものを切り出して再利用できる
+
 ## 疑問点
 
 + CRUDの書き方は?
+
++ エンティティの依存関係は、どのように実現する?
 
 + 管理者アカウントは楽に作れる?
 
