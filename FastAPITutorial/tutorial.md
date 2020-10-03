@@ -919,6 +919,26 @@ async def read_item(item_id: str):
 + custom exception handlersも追加できる
 + default exception handlerを上書きできる
 
+## Path Operation Configuration
+
++ 注: path operation decoratorに直接渡される
+
+### Tags
+
++ tagsで、パスの区分をドキュメントに反映させる
+
+### Summary and description
+
++ APIの要約と説明を追加できる
+
+### Description from docstring
+
++ MarkDown形式で、docstringを利用した記述ができる
+
+### Response description
+
++ レスポンスの説明を追加できる
+
 ## 疑問点
 
 + CRUDの書き方は?
