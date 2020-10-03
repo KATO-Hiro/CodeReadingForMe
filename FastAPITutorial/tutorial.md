@@ -893,6 +893,32 @@ pip install python-multipart
 
 + FormとFileアップロードは組み合わせることもできる
 
+## Handling Errors
+
+### Use HTTPExceptionを使うケース
+
+```py
+# HTTPExceptionをインポート
+from fastapi import FastAPI, HTTPException
+
+app = FastAPI()
+
+items = {"foo": "The Foo Wrestlers"}
+
+
+@app.get("/items/{item_id}")
+async def read_item(item_id: str):
+    if item_id not in items:
+        # 例外を発生させる
+        # 例: IDが見つからない場合
+        raise HTTPException(status_code=404, detail="Item not found")
+    return {"item": items[item_id]}
+```
+
++ custom headersを追加することもできる
++ custom exception handlersも追加できる
++ default exception handlerを上書きできる
+
 ## 疑問点
 
 + CRUDの書き方は?
