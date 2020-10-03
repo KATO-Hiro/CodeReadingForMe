@@ -501,6 +501,140 @@ async def read_user_item(
 # Note: パスパラメータと同様に、Enumを使うこともできる
 ```
 
+## Request Body
+
++ client(browser)とのやり取りで使用
+  + API側: ほぼ必須
+  + clients側: いつも必要ではない
+
+  + POSTメソッドを使うのが一般的
+
+```py
+# 1. BaseModelをpydanticからインポート
+# 2. データモデルを作成
+from typing import Optional
+
+from fastapi import FastAPI
+from pydantic import BaseModel
+
+
+# BaseModelを継承
+# 属性: 型を指定
+# デフォルト値を設定することもできる
+class Item(BaseModel):
+    name: str
+    description: Optional[str] = None
+    price: float
+    tax: Optional[float] = None
+
+
+app = FastAPI()
+
+
+# 関数の引数がスッキリして見やすい
+@app.post("/items/")
+async def create_item(item: Item):
+    return item
+```
+
+```md
+// 処理の流れ
+・リクエストの本体をJSONとして読む
+・必要に応じて、対応する型に変換する
+・データの検証
+・Itemのパラメータを受け取る
+・JSONスキーマを生成
+・これらがOpenAPIスキーマを生成、自動的にドキュメント化
+
+// SchemasにItemモデルが追加されている
+```
+
+### Use the model
+
+```py
+from typing import Optional
+
+from fastapi import FastAPI
+from pydantic import BaseModel
+
+
+class Item(BaseModel):
+    name: str
+    description: Optional[str] = None
+    price: float
+    tax: Optional[float] = None
+
+
+app = FastAPI()
+
+
+# モデルのアクセス方法
+# モデル名.属性
+@app.post("/items/")
+async def create_item(item: Item):
+    item_dict = item.dict()
+    if item.tax:
+        price_with_tax = item.price + item.tax
+        item_dict.update({"price_with_tax": price_with_tax})
+    return item_dict
+```
+
+### Request body + path parameters
+
++ 上記は同時に定義できる
+  + パスパラメータは自動的に判別してくれる
+
+```py
+from typing import Optional
+
+from fastapi import FastAPI
+from pydantic import BaseModel
+
+
+class Item(BaseModel):
+    name: str
+    description: Optional[str] = None
+    price: float
+    tax: Optional[float] = None
+
+
+app = FastAPI()
+
+
+@app.put("/items/{item_id}")
+async def create_item(item_id: int, item: Item):
+    return {"item_id": item_id, **item.dict()}
+```
+
+### Request body + path + query parameters
+
++ 上記全てを同時に宣言することもできる
+
+```py
+from typing import Optional
+
+from fastapi import FastAPI
+from pydantic import BaseModel
+
+
+class Item(BaseModel):
+    name: str
+    description: Optional[str] = None
+    price: float
+    tax: Optional[float] = None
+
+
+app = FastAPI()
+
+
+@app.put("/items/{item_id}")
+async def create_item(item_id: int, item: Item, q: Optional[str] = None):
+    result = {"item_id": item_id, **item.dict()}
+    if q:
+        result.update({"q": q})
+    return result
+```
+
 ## 疑問点
 
 + CRUDの書き方は?
