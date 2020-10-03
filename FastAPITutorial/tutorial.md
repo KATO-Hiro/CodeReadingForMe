@@ -939,6 +939,11 @@ async def read_item(item_id: str):
 
 + レスポンスの説明を追加できる
 
+## JSON Compatible Encoder
+
++ JSONの互換性のある形式に変換するときは、jsonable_encoder()を使う
+  + 例: DBに保存する
+
 ## 疑問点
 
 + CRUDの書き方は?
