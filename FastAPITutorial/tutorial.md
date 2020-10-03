@@ -800,6 +800,10 @@ async def read_items(q: Optional[List[str]] = Query(None)):
 
 + PathとQueryを組み合わることもできる
 
+## Body - Fields
+
++ Pydantic's Fieldを使うことで、Pydantic modelの内部の検証とメタデータが定義できる
+
 ## 疑問点
 
 + CRUDの書き方は?
