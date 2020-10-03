@@ -796,6 +796,10 @@ async def read_items(q: Optional[List[str]] = Query(None)):
 + lt: less than
 + le: less than or equal
 
+## Body - Multiple Parameters
+
++ PathとQueryを組み合わることもできる
+
 ## 疑問点
 
 + CRUDの書き方は?
