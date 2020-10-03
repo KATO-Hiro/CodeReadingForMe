@@ -1023,6 +1023,11 @@ async def get_db():
 + 現在のユーザの情報を取得するコードを追加
 + あとは、ダミーの部分を実際のものに置き換えるだけ
 
+## Simple OAuth2 with Password and Bearer
+
++ 基本的な実装方法を解説
++ まだ、セキュアではない
+
 ## 疑問点
 
 + CRUDの書き方は?
