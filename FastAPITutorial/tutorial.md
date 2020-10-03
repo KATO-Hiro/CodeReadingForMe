@@ -635,6 +635,156 @@ async def create_item(item_id: int, item: Item, q: Optional[str] = None):
     return result
 ```
 
+## Query Parameters and String Validations
+
++ 追加の情報の定義やパラメータの検証
+
+```py
+from typing import Optional
+
+from fastapi import FastAPI
+
+app = FastAPI()
+
+
+@app.get("/items/")
+async def read_items(q: Optional[str] = None):
+    results = {"items": [{"item_id": "Foo"}, {"item_id": "Bar"}]}
+    if q:
+        results.update({"q": q})
+    return results
+```
+
+### Additional validation
+
+```py
+from typing import Optional
+
+# Queryをインポート
+from fastapi import FastAPI, Query
+
+app = FastAPI()
+
+
+# Query(デフォルト値, max_length=50)
+# 50文字まではOKな例
+@app.get("/items/")
+async def read_items(q: Optional[str] = Query(None, max_length=50)):
+    results = {"items": [{"item_id": "Foo"}, {"item_id": "Bar"}]}
+    if q:
+        results.update({"q": q})
+    return results
+```
+
+### Add more validations
+
++ 文字の最小値も指定できる
+  + min_length=xx
+
+```py
+from typing import Optional
+
+from fastapi import FastAPI, Query
+
+app = FastAPI()
+
+
+@app.get("/items/")
+async def read_items(q: Optional[str] = Query(None, min_length=3, max_length=50)):
+    results = {"items": [{"item_id": "Foo"}, {"item_id": "Bar"}]}
+    if q:
+        results.update({"q": q})
+    return results
+```
+
+### Add regular expressions
+
++ 正規表現も利用できる
+  + regex="^fixedquery$"で指定
+  + ""の中身は、^で開始、fixedqueryで正確な表現を指定、$で終了
+
+```py
+from typing import Optional
+
+from fastapi import FastAPI, Query
+
+app = FastAPI()
+
+
+@app.get("/items/")
+async def read_items(
+    q: Optional[str] = Query(None, min_length=3, max_length=50, regex="^fixedquery$")
+):
+    results = {"items": [{"item_id": "Foo"}, {"item_id": "Bar"}]}
+    if q:
+        results.update({"q": q})
+    return results
+```
+
+### Default values
+
++ Queryの第1引数にデフォルト値を設定できる
+
+```py
+from fastapi import FastAPI, Query
+
+app = FastAPI()
+
+
+@app.get("/items/")
+async def read_items(q: str = Query("fixedquery", min_length=3)):
+    results = {"items": [{"item_id": "Foo"}, {"item_id": "Bar"}]}
+    if q:
+        results.update({"q": q})
+    return results
+```
+
+### Make it required
+
++ パラメータを必須にすることもできる
+  + Queryの第1引数に...を指定
+
+```py
+from fastapi import FastAPI, Query
+
+app = FastAPI()
+
+
+@app.get("/items/")
+async def read_items(q: str = Query(..., min_length=3)):
+    results = {"items": [{"item_id": "Foo"}, {"item_id": "Bar"}]}
+    if q:
+        results.update({"q": q})
+    return results
+```
+
+### Query parameter list / multiple values
+
++ クエリパラメータを複数指定することもできる
+
+```py
+from typing import List, Optional
+
+from fastapi import FastAPI, Query
+
+app = FastAPI()
+
+
+# Optional[List[str]] = Query()で指定
+@app.get("/items/")
+async def read_items(q: Optional[List[str]] = Query(None)):
+    query_items = {"q": q}
+    return query_items
+```
+
+### Recap
+
++ 一般的なバリデーションとメタデータ
+  + alias: Pythonで有効ではない変数名をパラメータとして使うときの別名を指定できる
+  + title:
+  + description
+  + deprecated: バラメータを廃止することを明示
+
 ## 疑問点
 
 + CRUDの書き方は?
