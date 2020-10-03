@@ -889,6 +889,10 @@ pip install python-multipart
 
 + ファイルをアップロードすることができる
 
+## Request Forms and Files
+
++ FormとFileアップロードは組み合わせることもできる
+
 ## 疑問点
 
 + CRUDの書き方は?
