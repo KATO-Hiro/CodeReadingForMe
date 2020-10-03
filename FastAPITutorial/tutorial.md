@@ -826,6 +826,10 @@ async def read_items(q: Optional[List[str]] = Query(None)):
   + Decimal
 + 一覧は、Pydantic data typesを参照
 
+## Cookie Parameters
+
++ QueryやPathパラメータと同様に定義できる
+
 ## 疑問点
 
 + CRUDの書き方は?
@@ -857,6 +861,7 @@ async def read_items(q: Optional[List[str]] = Query(None)):
 + ReDocとは?
 + Swagger UIとReDocの違いは?なぜ2つある?
 + OpenAPIのメリットがイマイチ分かっていない
++ Cookie Parametersの使いどころとは?
 
 + 。
 
