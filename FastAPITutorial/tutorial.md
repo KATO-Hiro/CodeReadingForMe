@@ -963,6 +963,10 @@ async def read_item(item_id: str):
 
 + 依存関係を入れ子にすることもできる
 
+## Dependencies in path operation decorators
+
++ 依存関係にあるものに、戻り値が含まれていない場合にも対処できる
+
 ## 疑問点
 
 + CRUDの書き方は?
