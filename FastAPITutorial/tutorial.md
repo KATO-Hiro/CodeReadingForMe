@@ -885,6 +885,10 @@ async def create_item(name: str):
 pip install python-multipart
 ```
 
+## Import File
+
++ ファイルをアップロードすることができる
+
 ## 疑問点
 
 + CRUDの書き方は?
