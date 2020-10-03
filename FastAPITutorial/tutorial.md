@@ -1013,6 +1013,10 @@ async def get_db():
 
 + fastapi.securityで、セキュリティスキームに関する機能が含まれている
 
+## Security - First Steps
+
++ ユーザ名とパスワード形式の場合は、数行のコードでセキュリティの基本部分を実装できる
+
 ## 疑問点
 
 + CRUDの書き方は?
