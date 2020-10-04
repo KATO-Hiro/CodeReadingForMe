@@ -950,9 +950,216 @@ async def read_item(item_id: str):
 
 ### PATCHメソッドで部分的に更新する
 
+## Dependencies - First Steps
+
++ Dependency Injection
+  + 依存関係にあるものを切り出して再利用できる
+
+## Classes as Dependencies
+
++ 依存関係をクラスとして表現することもできる
+
+## Sub-dependencies
+
++ 依存関係を入れ子にすることもできる
+
+## Dependencies in path operation decorators
+
++ 依存関係にあるものに、戻り値が含まれていない場合にも対処できる
+
+## Dependencies with yield
+
++ 操作の実行後に必要な手順を含む依存関係についてもサポート
+
+```py
+# DBを開く&確実に閉じる
+async def get_db():
+    db = DBSession()
+    try:
+        yield db
+    finally:
+        db.close()
+```
+
+## Security Intro
+
++ 複雑で難しいトピック
++ 多くのフレームワークでは、セキュリティに関するコードが50%以上
++ FastAPIでは、全ての専門的なセキュリティの知識を学ばずに、簡単に・素早く・標準的な方法となるツールを提供している
+
+#### OAuth2
+
++ 認証と認可を扱う
++ かなり広範な仕様で、複雑なユースケースをカバーしている
++ サードパーティを使って認証する方法も含まれている
++ XXXでログインをしているシステムに該当
+
+#### OpenID Connect
+
++ OAuth2をもとにした別の仕様書
++ OAuth2を拡張して、曖昧なものを指定し、相互運用性を高めようとしている
++ ex: Google login
+
+#### OpenAPI
+
++ 旧Swagger
++ APIを構築するためのオープンな仕様
+
++ FastAPIはOpenAPIをベースにしており、複数の自動対話型ドキュメントインターフェイスやコード生成などが可能
+
++ OpenAPIには、複数のセキュリティ「スキーム」を定義する方法がある
+
+#### FastAPI utilities
+
++ fastapi.securityで、セキュリティスキームに関する機能が含まれている
+
+## Security - First Steps
+
++ ユーザ名とパスワード形式の場合は、数行のコードでセキュリティの基本部分を実装できる
+
+## Get Current User
+
++ Userモデルを定義
++ 現在のユーザの情報を取得するコードを追加
++ あとは、ダミーの部分を実際のものに置き換えるだけ
+
+## Simple OAuth2 with Password and Bearer
+
++ 基本的な実装方法を解説
++ まだ、セキュアではない
+
+## OAuth2 with Password (and hashing), Bearer with JWT tokens
+
++ JWTトークンとセキュアなパスワードのハッシュ化を利用して、セキュアなappに
+
+## Middleware
+
++ ミドルウェア: 特定の操作によって処理される前の全てのリクエストに対して動作する関数。全てのレスポンスを処理してから返す。
+
+## CORS (Cross-Origin Resource Sharing)
+
++ ブラウザ上で動作するフロントエンドがバックエンドと通信するJavaScriptコードを持っていて、バックエンドがフロントエンドとは異なる「オリジン」にある場合の状況を指す
+
+### Origin
+
++ プロトコル(http, https)、ドメイン(xxx.com, localhost,localhost.xxx.com)、ポート(80, 443, 8080)で構成される
+
++ 以下は全て違うオリジンと見なされる
+  http://localhost
+  https://localhost
+  http://localhost:8080
+
+### 手順
+
++ バックエンドで、"allowed origins"のリストを用意する必要がある
+
+### Wildcards
+
++ 上記のリストを定義するときには、ワイルドカードが利用できる
+
+### Use CORSMiddleware
+
+```py
+from fastapi import FastAPI
+# 1. CORSMiddlewareをインポート
+from fastapi.middleware.cors import CORSMiddleware
+
+app = FastAPI()
+
+# 2. 許可するoriginを文字列のリストで作成
+origins = [
+    "http://localhost.tiangolo.com",
+    "https://localhost.tiangolo.com",
+    "http://localhost",
+    "http://localhost:8080",
+]
+
+# 3. middlewareとして追加
+# いくつかのオプションを指定できる
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+@app.get("/")
+async def main():
+    return {"message": "Hello World"}
+```
+
++ 詳しくは、Moziilaのドキュメントを参照する
+
+## SQL (Relational) Databases
+
++ SQLAlchemyを使ったサンプルがある
+
++ SQLAlchemyでサポートしているDBなら、簡単に適用できる
+  + PostgreSQL
+  + MySQL
+  + SQLite
+  + Oracle
+  + Microsoft SQL Server, etc.
+
++ SQLiteを使った例
++ また、DockerベースのFastAPIとPostgreSQLを利用した公式プロジェクトジェネレータがある
+
++ SQLAlchemyに関する設定
++ DBのモデルを作成
+  + relationshipを表現することもできる
++ Pydanticモデルの作成
++ CRUD処理
++ FastAPI app
+
+## Bigger Applications - Multiple Files
+
++ 複数のファイルに分割して、フレキシブルに
+
++ APIRouterを使う
+
+## Background Tasks
+
++ `BackgroundTasks`を利用する
+
+## Metadata and Docs URLs
+
++ メタデータやドキュメントのURLをカスタマイズできる
+
+## Static Files
+
++ `StaticFiles`を使う。
+
+## Testing
+
++ Starlette: Requestに基づいている
+  + TestClientは、reqeustsと同じように使える
++ pytestがそのまま使える
+
++ APIとテストを別ファイルにすることもできる
+
++ テストの内容
+  + status code
+  + jsonの中身
+
+## Debugging
+
++ VSCodeやPyCharmなどで、デバッガを使うことができる
+
+## Deployment
+
++ Docker Swarm mode cluster with Traefik and HTTPS
+  + サーバの利用代が月$5〜
+
++ FastAPI Project Generatorsで、テンプレートを生成
+
 ## 疑問点
 
 + CRUDの書き方は?
+  + SQL (Relational) Databasesを参考にする
+
++ エンティティの依存関係は、どのように実現する?
 
 + 管理者アカウントは楽に作れる?
 
@@ -963,6 +1170,7 @@ async def read_item(item_id: str):
 + Vercelにデプロイできる?
 
 + CORS対策は?
+  + Use CORSMiddlewareを見る
 
 + mypyによる型チェックに対応している?
   + Yes
@@ -970,6 +1178,7 @@ async def read_item(item_id: str):
 + Pydanticとは?
 
 + Pytestは使える?
+  + Yes
 
 + 標準的なディレクトリ構成は?
   + APIとテストは分離している?
@@ -983,7 +1192,13 @@ async def read_item(item_id: str):
 + OpenAPIのメリットがイマイチ分かっていない
 + Cookie Parametersの使いどころとは?
 
-+ 。
++ yieldの使い所は?
+
++ MySQLに接続する方法は?
+
++ pydanticとSQLAlchemyでは、モデルの書き方が違う。
+  + 両者の役割の違いはどうなっている?
+  + なぜ分けて定義している?
 
 ## 感想
 
