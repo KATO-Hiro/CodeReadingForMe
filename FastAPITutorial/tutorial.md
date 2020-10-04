@@ -1113,6 +1113,12 @@ async def main():
 + CRUD処理
 + FastAPI app
 
+## Bigger Applications - Multiple Files
+
++ 複数のファイルに分割して、フレキシブルに
+
++ APIRouterを使う
+
 ## 疑問点
 
 + CRUDの書き方は?
