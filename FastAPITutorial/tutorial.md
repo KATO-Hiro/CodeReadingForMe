@@ -1143,6 +1143,10 @@ async def main():
   + status code
   + jsonの中身
 
+## Debugging
+
++ VSCodeやPyCharmなどで、デバッガを使うことができる
+
 ## 疑問点
 
 + CRUDの書き方は?
