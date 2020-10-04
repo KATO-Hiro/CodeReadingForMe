@@ -1131,6 +1131,18 @@ async def main():
 
 + `StaticFiles`を使う。
 
+## Testing
+
++ Starlette: Requestに基づいている
+  + TestClientは、reqeustsと同じように使える
++ pytestがそのまま使える
+
++ APIとテストを別ファイルにすることもできる
+
++ テストの内容
+  + status code
+  + jsonの中身
+
 ## 疑問点
 
 + CRUDの書き方は?
@@ -1155,6 +1167,7 @@ async def main():
 + Pydanticとは?
 
 + Pytestは使える?
+  + Yes
 
 + 標準的なディレクトリ構成は?
   + APIとテストは分離している?
