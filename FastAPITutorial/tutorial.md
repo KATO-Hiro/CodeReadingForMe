@@ -1092,6 +1092,27 @@ async def main():
 
 + 詳しくは、Moziilaのドキュメントを参照する
 
+## SQL (Relational) Databases
+
++ SQLAlchemyを使ったサンプルがある
+
++ SQLAlchemyでサポートしているDBなら、簡単に適用できる
+  + PostgreSQL
+  + MySQL
+  + SQLite
+  + Oracle
+  + Microsoft SQL Server, etc.
+
++ SQLiteを使った例
++ また、DockerベースのFastAPIとPostgreSQLを利用した公式プロジェクトジェネレータがある
+
++ SQLAlchemyに関する設定
++ DBのモデルを作成
+  + relationshipを表現することもできる
++ Pydanticモデルの作成
++ CRUD処理
++ FastAPI app
+
 ## 疑問点
 
 + CRUDの書き方は?
@@ -1129,7 +1150,11 @@ async def main():
 
 + yieldの使い所は?
 
-+ 。
++ MySQLに接続する方法は?
+
++ pydanticとSQLAlchemyでは、モデルの書き方が違う。
+  + 両者の役割の違いはどうなっている?
+  + なぜ分けて定義している?
 
 ## 感想
 
