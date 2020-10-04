@@ -1127,6 +1127,10 @@ async def main():
 
 + メタデータやドキュメントのURLをカスタマイズできる
 
+## Static Files
+
++ `StaticFiles`を使う。
+
 ## 疑問点
 
 + CRUDの書き方は?
