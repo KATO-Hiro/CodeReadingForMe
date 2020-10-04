@@ -1147,6 +1147,13 @@ async def main():
 
 + VSCodeやPyCharmなどで、デバッガを使うことができる
 
+## Deployment
+
++ Docker Swarm mode cluster with Traefik and HTTPS
+  + サーバの利用代が月$5〜
+
++ FastAPI Project Generatorsで、テンプレートを生成
+
 ## 疑問点
 
 + CRUDの書き方は?
