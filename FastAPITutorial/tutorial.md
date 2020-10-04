@@ -1119,9 +1119,14 @@ async def main():
 
 + APIRouterを使う
 
+## Background Tasks
+
++ `BackgroundTasks`を利用する
+
 ## 疑問点
 
 + CRUDの書き方は?
+  + SQL (Relational) Databasesを参考にする
 
 + エンティティの依存関係は、どのように実現する?
 
