@@ -1123,6 +1123,10 @@ async def main():
 
 + `BackgroundTasks`を利用する
 
+## Metadata and Docs URLs
+
++ メタデータやドキュメントのURLをカスタマイズできる
+
 ## 疑問点
 
 + CRUDの書き方は?
@@ -1139,6 +1143,7 @@ async def main():
 + Vercelにデプロイできる?
 
 + CORS対策は?
+  + Use CORSMiddlewareを見る
 
 + mypyによる型チェックに対応している?
   + Yes
