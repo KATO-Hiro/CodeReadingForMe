@@ -42,6 +42,10 @@ pip install uvicorn
 ```py
 # 最もシンプルな例
 # main.py
+
+# 型定義に関するモジュールをインポート
+from typing import Optional
+
 # FastAPIをインポート
 from fastapi import FastAPI
 
@@ -54,6 +58,13 @@ app = FastAPI()
 @app.get("/")
 async def root():
     return {"message": "Hello World"}
+
+# パスパラメータやクエリパラメータを使うこともできる
+# ex: /item/5?q=hoge
+# 5がパスパラメータ、qがクエリパラメータ
+@app.get("/items/{item_id}")
+def read_item(item_id: int, q: Optional[str] = None):
+    return {"item_id": item_id, "q": q}
 ```
 
 ```bash
@@ -122,6 +133,26 @@ http://127.0.0.1:8000/openapi.json
 ### Recap, step by step
 
 + Recap: 復習
+
++ チュートリアルに含まれている内容
+  + headers, cookies, form fields and filesのような異なる場所にあるパラメータの宣言
+  + バリデーションを行う方法
+  + Dependency Injection systemの使い方
+  + セキュリティと認証: OAuth2 with JWT tokens and HTTP Basic auth
+  + Pydanticを用いた深い階層のJSONモデル
+  + Starletteによるさまざまな機能のサポート
+    + WebSockets
+    + GraphQL
+    + requestsとpytestによる簡単なテスト
+    + CORS
+    + Cookie Sessions など
+
++ 依存関係にあるソフトウェア(任意)
+  + Pydanticを使う場合
+    + ujson - for faster JSON "parsing".
+  + Starletteを使う場合
+    + requests - Required if you want to use the TestClient
+  + pip install fastapi[all]でインストールできる
 
 ```py
 # FastAPIは、Starletteを直接継承したPythonのクラス
