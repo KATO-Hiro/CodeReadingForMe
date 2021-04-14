@@ -846,7 +846,7 @@ async def read_items(q: Optional[List[str]] = Query(None)):
 + 一般的なバリデーションとメタデータ
   + alias: Pythonで有効ではない変数名をパラメータとして使うときの別名を指定できる
   + title:
-  + description
+  + description: クエリパラメータに関する説明を追加
   + deprecated: バラメータを廃止することを明示
 
 ## Path Parameters and Numeric Validations
@@ -867,6 +867,33 @@ async def read_items(q: Optional[List[str]] = Query(None)):
 ## Body - Fields
 
 + Pydantic's Fieldを使うことで、Pydantic modelの内部の検証とメタデータが定義できる
+
+```py
+from typing import Optional
+
+from fastapi import Body, FastAPI
+
+from pydantic import BaseModel, Field # Fieldをpydanticから直接インポート
+
+
+app = FastAPI()
+
+
+class Item(BaseModel):
+    name: str
+    description: Optional[str] = Field(
+        None, title="The description of the item", max_length=300
+    ) # 個別に検証できる。QueryやPath, Bodyと同じように書くことができる。
+    price: float = Field(..., gt=0, description="The price must be greater than zero")
+    tax: Optional[float] = None
+
+
+@app.put("/items/{item_id}")
+async def update_item(item_id: int, item: Item = Body(..., embed=True)):
+    results = {"item_id": item_id, "item": item}
+    return results
+
+```
 
 ## Body - Nested Models
 
@@ -1240,6 +1267,8 @@ async def main():
   + Yes
 
 + Pydanticとは?
+  + モデルの定義を便利にしてくれる
+  + バリデーションも行ってくれる?
 
 + Pytestは使える?
   + Yes
