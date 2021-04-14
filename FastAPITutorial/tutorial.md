@@ -897,6 +897,97 @@ async def update_item(item_id: int, item: Item = Body(..., embed=True)):
 
 ## Body - Nested Models
 
+### List fields with type parameter
+
+```py
+from typing import List, Optional # Listをインポート
+
+from fastapi import FastAPI
+from pydantic import BaseModel
+
+app = FastAPI()
+
+
+class Item(BaseModel):
+    name: str
+    description: Optional[str] = None
+    price: float
+    tax: Optional[float] = None
+    tags: List[str] = [] # List[type]と記述する。このケースでは、stringのリストになる
+
+
+@app.put("/items/{item_id}")
+async def update_item(item_id: int, item: Item):
+    results = {"item_id": item_id, "item": item}
+    return results
+
+```
+
+### Nested Models
+
+```py
+from typing import Optional, Set
+
+from fastapi import FastAPI
+from pydantic import BaseModel
+
+app = FastAPI()
+
+
+# サブモデルの定義
+class Image(BaseModel):
+    url: str
+    name: str
+
+
+class Item(BaseModel):
+    name: str
+    description: Optional[str] = None
+    price: float
+    tax: Optional[float] = None
+    tags: Set[str] = []
+    image: Optional[Image] = None # サブモデルを属性の型として使う
+
+
+@app.put("/items/{item_id}")
+async def update_item(item_id: int, item: Item):
+    results = {"item_id": item_id, "item": item}
+    return results
+```
+
+### Attributes with lists of submodels
+
++ サブモデルのlistやsetを定義することもできる
+
+```py
+from typing import List, Optional, Set
+
+from fastapi import FastAPI
+from pydantic import BaseModel, HttpUrl
+
+app = FastAPI()
+
+
+class Image(BaseModel):
+    url: HttpUrl
+    name: str
+
+
+class Item(BaseModel):
+    name: str
+    description: Optional[str] = None
+    price: float
+    tax: Optional[float] = None
+    tags: Set[str] = set()
+    images: Optional[List[Image]] = None # List[]やSet[]で囲むだけ
+
+
+@app.put("/items/{item_id}")
+async def update_item(item_id: int, item: Item):
+    results = {"item_id": item_id, "item": item}
+    return results
+```
+
 + Pydanticにより、ネストしたモデルを利用することができる。
   + 任意の階層を定義できる
 + List, Setが利用できる
