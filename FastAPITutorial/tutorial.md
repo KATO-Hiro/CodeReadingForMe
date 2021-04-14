@@ -1781,6 +1781,242 @@ async def read_users_me(current_user: User = Depends(get_current_user)):
 + 基本的な実装方法を解説
 + まだ、セキュアではない
 
+### Get the username and password
+
++ `scope`を送信する必要がある
+  + `scope`は文字列
+
++ `OAuth2PasswordRequestForm`はクラス
+  + フォームボディを宣言する
+  + username, password, scope(任意), grant_type(任意), client_id(任意)、client_secret(任意)
+
+### Code to get the username and password
+
+```py
+from typing import Optional
+
+from fastapi import Depends, FastAPI, HTTPException, status # 追加
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm # 追加
+
+from pydantic import BaseModel
+
+fake_users_db = {
+    "johndoe": {
+        "username": "johndoe",
+        "full_name": "John Doe",
+        "email": "johndoe@example.com",
+        "hashed_password": "fakehashedsecret",
+        "disabled": False,
+    },
+    "alice": {
+        "username": "alice",
+        "full_name": "Alice Wonderson",
+        "email": "alice@example.com",
+        "hashed_password": "fakehashedsecret2",
+        "disabled": True,
+    },
+}
+
+app = FastAPI()
+
+
+def fake_hash_password(password: str):
+    return "fakehashed" + password
+
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+
+class User(BaseModel):
+    username: str
+    email: Optional[str] = None
+    full_name: Optional[str] = None
+    disabled: Optional[bool] = None
+
+
+class UserInDB(User):
+    hashed_password: str
+
+
+def get_user(db, username: str):
+    if username in db:
+        user_dict = db[username]
+        return UserInDB(**user_dict)
+
+
+def fake_decode_token(token):
+    # This doesn't provide any security at all
+    # Check the next version
+    user = get_user(fake_users_db, token)
+    return user
+
+
+async def get_current_user(token: str = Depends(oauth2_scheme)):
+    user = fake_decode_token(token)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return user
+
+
+async def get_current_active_user(current_user: User = Depends(get_current_user)):
+    if current_user.disabled:
+        raise HTTPException(status_code=400, detail="Inactive user")
+    return current_user
+
+
+# 追加
+# form_dataにOAuth2PasswordRequestForm型、Depends()を指定
+@app.post("/token")
+async def login(form_data: OAuth2PasswordRequestForm = Depends()):
+
+    user_dict = fake_users_db.get(form_data.username)
+    # ユーザが存在しない場合の処理
+    if not user_dict:
+        raise HTTPException(status_code=400, detail="Incorrect username or password")
+    # key-valueの一つずつ与えた場合と、以下のコードは等価
+    user = UserInDB(**user_dict)
+    # ハッシュ化されたパスワードのチェック
+    hashed_password = fake_hash_password(form_data.password)
+    if not hashed_password == user.hashed_password:
+        raise HTTPException(status_code=400, detail="Incorrect username or password")
+
+    # tokenを返す
+    # access_tokenとtoken_typeが必須
+    return {"access_token": user.username, "token_type": "bearer"}
+
+
+@app.get("/users/me")
+async def read_users_me(current_user: User = Depends(get_current_active_user)):
+    return current_user
+
+```
+
+### Update the dependencies
+
++ ユーザが存在して、かつ認証されており、アクティブなときだけエンドポイントを有効化
+
+```py
+from typing import Optional
+
+from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from pydantic import BaseModel
+
+fake_users_db = {
+    "johndoe": {
+        "username": "johndoe",
+        "full_name": "John Doe",
+        "email": "johndoe@example.com",
+        "hashed_password": "fakehashedsecret",
+        "disabled": False,
+    },
+    "alice": {
+        "username": "alice",
+        "full_name": "Alice Wonderson",
+        "email": "alice@example.com",
+        "hashed_password": "fakehashedsecret2",
+        "disabled": True,
+    },
+}
+
+app = FastAPI()
+
+
+def fake_hash_password(password: str):
+    return "fakehashed" + password
+
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+
+class User(BaseModel):
+    username: str
+    email: Optional[str] = None
+    full_name: Optional[str] = None
+    disabled: Optional[bool] = None
+
+
+class UserInDB(User):
+    hashed_password: str
+
+
+def get_user(db, username: str):
+    if username in db:
+        user_dict = db[username]
+        return UserInDB(**user_dict)
+
+
+def fake_decode_token(token):
+    # This doesn't provide any security at all
+    # Check the next version
+    user = get_user(fake_users_db, token)
+    return user
+
+
+# 追記
+async def get_current_user(token: str = Depends(oauth2_scheme)):
+    user = fake_decode_token(token)
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    return user
+
+
+# 追記
+async def get_current_active_user(current_user: User = Depends(get_current_user)):
+
+    if current_user.disabled:
+        raise HTTPException(status_code=400, detail="Inactive user")
+
+    return current_user
+
+
+@app.post("/token")
+async def login(form_data: OAuth2PasswordRequestForm = Depends()):
+    user_dict = fake_users_db.get(form_data.username)
+    if not user_dict:
+        raise HTTPException(status_code=400, detail="Incorrect username or password")
+    user = UserInDB(**user_dict)
+    hashed_password = fake_hash_password(form_data.password)
+    if not hashed_password == user.hashed_password:
+        raise HTTPException(status_code=400, detail="Incorrect username or password")
+
+    return {"access_token": user.username, "token_type": "bearer"}
+
+
+# 変更
+@app.get("/users/me")
+async def read_users_me(current_user: User = Depends(get_current_active_user)):
+
+    return current_user
+
+```
+
+### See it in action
+
+#### Authenticate
+
++ OpenAPIのUIで"Authorize" buttonをクリック
++ usernameとpasswordを入力
+
+#### Get your own user data
+
++ users/meを実行すると、ユーザ情報が表示される
++ ログアウトしていると未認証となり、401エラーが返ってくる
+
+#### Inactive user
+
++ "inactive user"を受け取るはず
+
 ## OAuth2 with Password (and hashing), Bearer with JWT tokens
 
 + JWTトークンとセキュアなパスワードのハッシュ化を利用して、セキュアなappに
