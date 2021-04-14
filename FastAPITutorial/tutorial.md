@@ -213,6 +213,8 @@ app = FastAPI()
 
 # Pythonの関数として記述する
 # async: 非同期処理。使わない場合は、外す。
+# Q: メソッド名のルールは、どうなっている?
+# A: 公式チュートリアルでは、動詞_名詞の形式になっている。
 @app.get("/")
 async def root():
     # Step 5: return the content
@@ -240,6 +242,7 @@ app = FastAPI()
 
 # パスのパラメータや変数は、Pythonの形式と同じシンタックス
 # パスパラメータのitemd_idは、関数内でitem_id変数として扱われる
+# "hoges/{hoge_id}"のように、/複数形/単数形_idの形式になっている
 @app.get("/items/{item_id}")
 async def read_item(item_id):
     return {"item_id": item_id}
@@ -312,7 +315,7 @@ from fastapi import FastAPI
 app = FastAPI()
 
 
-# パスは、順番に評価される
+# パスは、上から順番に評価される
 # 逆にすると、meが{user_id}に入る
 @app.get("/users/me")
 async def read_user_me():
@@ -336,7 +339,9 @@ from fastapi import FastAPI
 
 
 # str, Enumを継承する
+# Q: 継承の順番は影響がある?
 class ModelName(str, Enum):
+    # 属性名 = 値
     alexnet = "alexnet"
     resnet = "resnet"
     lenet = "lenet"
@@ -346,8 +351,11 @@ app = FastAPI()
 
 
 # 引数の型に自作のクラスを取ることもできる
+# 型の部分に、自作のクラスを指定するだけ
 @app.get("/model/{model_name}")
 async def get_model(model_name: ModelName):
+    # Q: 条件が増えてきたときは、どうする?
+    # A: デザインパターンのFactory methodを利用するか?
     # ClassName.attrの形式で利用できる
     if model_name == ModelName.alexnet:
         # 戻り値にmodel_nameを取ることもできる
@@ -357,6 +365,7 @@ async def get_model(model_name: ModelName):
     if model_name.value == "lenet":
         return {"model_name": model_name, "message": "LeCNN all the images"}
 
+    # 戻り値に、パスの値を返すこともできる。入れ子になった値も可能。
     return {"model_name": model_name, "message": "Have some residuals"}
 ```
 
@@ -390,7 +399,7 @@ async def read_file(file_path: str):
 
 ### Recap
 
-+ Pythonの型宣言による効果により、一度の定義すれば以下の効果が得られる
++ Pythonの型宣言による効果により、一度だけ定義すれば以下の効果が得られる(他のフレームワークと比べたときのメリット)
   + エディタのサポート
   + データのパース
   + バリデーション
