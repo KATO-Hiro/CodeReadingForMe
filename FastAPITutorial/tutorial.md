@@ -47,13 +47,15 @@ pip install uvicorn
 from typing import Optional
 
 # FastAPIをインポート
+# Starletteを直接継承しているため、その機能を全て利用できる
 from fastapi import FastAPI
 
 # インスタンスを作成
+# 名称は、appでなくてもよい
 app = FastAPI()
 
 
-# デコレータで、HTTPメソッドとルーティングを指定
+# デコレータで、HTTPメソッドとルーティング(パス、エンドポイント)を指定
 # 関数を定義して、値を返す
 @app.get("/")
 async def root():
@@ -196,6 +198,10 @@ async def root():
 @app.post() # to create data
 @app.put() # to update data
 @app.delete()
+@app.options()
+@app.head()
+@app.patch()
+@app.trace()
 ```
 
 ```py
@@ -216,6 +222,14 @@ async def root():
 
 # 開発サーバを起動・リロードする
 ```
+
+#### Recap
+
++ Import FastAPI
++ appインスタンスを作成
++ path operation decoratorを書く (@app.get("/"))
++ path operation functionを書く (def root(): ...)
++ 開発サーバを起動・リロード
 
 ## Path Parameters
 

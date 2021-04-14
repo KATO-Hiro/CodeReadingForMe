@@ -24,3 +24,5 @@ def update_item(item_id: int, item: Item):
 ```
 
 ## See
+
+https://github.com/samuelcolvin/pydantic/
