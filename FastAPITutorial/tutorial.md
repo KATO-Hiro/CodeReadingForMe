@@ -1255,17 +1255,178 @@ async def read_item(item_id: str):
 
 + tagsで、パスの区分をドキュメントに反映させる
 
+```py
+from typing import Optional, Set
+
+from fastapi import FastAPI
+from pydantic import BaseModel
+
+app = FastAPI()
+
+
+class Item(BaseModel):
+    name: str
+    description: Optional[str] = None
+    price: float
+    tax: Optional[float] = None
+    tags: Set[str] = []
+
+
+# tags=["hoge"]を指定すると、OpenAPI schemaでドキュメントに反映される
+@app.post("/items/", response_model=Item, tags=["items"])
+async def create_item(item: Item):
+    return item
+
+
+@app.get("/items/", tags=["items"])
+async def read_items():
+    return [{"name": "Foo", "price": 42}]
+
+
+@app.get("/users/", tags=["users"])
+async def read_users():
+    return [{"username": "johndoe"}]
+```
+
 ### Summary and description
 
 + APIの要約と説明を追加できる
+
+```py
+from typing import Optional, Set
+
+from fastapi import FastAPI
+from pydantic import BaseModel
+
+app = FastAPI()
+
+
+class Item(BaseModel):
+    name: str
+    description: Optional[str] = None
+    price: float
+    tax: Optional[float] = None
+    tags: Set[str] = []
+
+
+# summary、descriptionに記述
+@app.post(
+    "/items/",
+    response_model=Item,
+    summary="Create an item",
+    description="Create an item with all the information, name, description, price, tax and a set of unique tags",
+
+)
+async def create_item(item: Item):
+    return item
+```
 
 ### Description from docstring
 
 + MarkDown形式で、docstringを利用した記述ができる
 
+```py
+from typing import Optional, Set
+
+from fastapi import FastAPI
+from pydantic import BaseModel
+
+app = FastAPI()
+
+
+class Item(BaseModel):
+    name: str
+    description: Optional[str] = None
+    price: float
+    tax: Optional[float] = None
+    tags: Set[str] = []
+
+
+# ドキュメントの記述例
+@app.post("/items/", response_model=Item, summary="Create an item")
+async def create_item(item: Item):
+    """
+
+    Create an item with all the information:
+
+    - **name**: each item must have a name
+    - **description**: a long description
+    - **price**: required
+    - **tax**: if the item doesn't have tax, you can omit this
+    - **tags**: a set of unique tag strings for this item
+    """
+
+    return item
+```
+
 ### Response description
 
 + レスポンスの説明を追加できる
+
+```py
+from typing import Optional, Set
+
+from fastapi import FastAPI
+from pydantic import BaseModel
+
+app = FastAPI()
+
+
+class Item(BaseModel):
+    name: str
+    description: Optional[str] = None
+    price: float
+    tax: Optional[float] = None
+    tags: Set[str] = []
+
+
+# response_descripiton="hoge"で追記
+@app.post(
+    "/items/",
+    response_model=Item,
+    summary="Create an item",
+    response_description="The created item",
+
+)
+async def create_item(item: Item):
+    """
+    Create an item with all the information:
+
+    - **name**: each item must have a name
+    - **description**: a long description
+    - **price**: required
+    - **tax**: if the item doesn't have tax, you can omit this
+    - **tags**: a set of unique tag strings for this item
+    """
+    return item
+
+```
+
+### Deprecate a path operation
+
++ deprecatedにする場合は、コードを消すのではなく`deprecated`を使う
+
+```py
+from fastapi import FastAPI
+
+app = FastAPI()
+
+
+@app.get("/items/", tags=["items"])
+async def read_items():
+    return [{"name": "Foo", "price": 42}]
+
+
+@app.get("/users/", tags=["users"])
+async def read_users():
+    return [{"username": "johndoe"}]
+
+
+# OpenAPIで非表示となり、利用できなくなる
+@app.get("/elements/", tags=["items"], deprecated=True)
+async def read_elements():
+    return [{"item_id": "Foo"}]
+```
 
 ## JSON Compatible Encoder
 
