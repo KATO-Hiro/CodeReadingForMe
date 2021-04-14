@@ -1505,6 +1505,59 @@ async def get_db():
 ## Security - First Steps
 
 + ユーザ名とパスワード形式の場合は、数行のコードでセキュリティの基本部分を実装できる
++ OAuth2を利用する
+
+```py
+from fastapi import Depends, FastAPI
+from fastapi.security import OAuth2PasswordBearer # インポート
+
+app = FastAPI()
+
+# 追加
+# callable
+# ex: oauth2_scheme(some, parameters)なので、Depends()とともに使える
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+# Depends()を追記
+@app.get("/items/")
+async def read_items(token: str = Depends(oauth2_scheme)):
+    return {"token": token}
+```
+
++ 上記のコードを実行すると、OpenAPIのUIで認証が要求されるようになる
+
+### The password flow
+
++ `password flow`はOAuth2における`flows`の一つ
+  + セキュリティと認証を扱う
++ OAuth2は、バックエンドやAPIがユーザを認証するサーバから独立できるように設計されていた
++ しかし、FastAPI appでは、APIと認証を処理する
+
++ 認証の手順の概要
+  + フロントエンド側のユーザが`username`と`password`を入力して、`Enter`を押す
+  + フロント側が、上記の情報を特定のAPIに送信する (tokenUrl="token")
+  + APIが`username`と`password`を確認し、`token`を返す
+    + tokenは、ただの文字列で、後からこのユーザを識別するために使う
+    + 通常は、tokenに有効期限が設定されている
+      + ユーザは、しばらくするとログインをし直すことになる
+      + もし、トークンが盗まれたとしても、リスクは少ない。永久的なキーではないので、永遠には動作しない。
+  + フロント側は、tokenを一時的にどこかに保存する
+  + フロント側のユーザは、フロントのappの別のセクションに移動する
+  + フロントは、APIから別のデータを取得する必要がある
+    + 特定のエンドポイントに関しては、認証が必要ある
+    + APIに認証を行うためには、tokenとBearerの値を追加したAuthorizationヘッダーを送信する
+    + tokenにfoobarが含まれていたら、`Authorization`ヘッダーは、Bearer foobarとなる
+
+### FastAPI's OAuth2PasswordBearer
+
++ セキュリティの機能を実装するために、抽象度の異なるツールが提供されている
++ OAuth2とPassword flow, Bearer tokenを使ったサンプル
+  + OAuthPasswordBearerクラスを使う
+
+### What it does
+
++ `Authorization`ヘッダーに関して、Bearerとtokenが`str`として返ってきている
++ なければ、ステータスコード401(UNAUTHORIZED)がそのまま返ってくる
 
 ## Get Current User
 
