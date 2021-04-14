@@ -1076,8 +1076,43 @@ async def read_items(user_agent: Optional[str] = Header(None)):
 ## Response Model
 
 + @app.xxxで、指定
++ `response_model`を使う
 + モデルを別途作成し、レスポンスに含めない情報を指定できる
   + 例: パスワード
+
+### Add an output model
+
+```py
+from typing import Optional
+
+from fastapi import FastAPI
+from pydantic import BaseModel, EmailStr
+
+app = FastAPI()
+
+
+# 危険: ユーザのプレーンパスワードをresponseに絶対入れてはならない
+# データを受け取るときのモデル
+class UserIn(BaseModel):
+    username: str
+    password: str
+    email: EmailStr
+    full_name: Optional[str] = None
+
+
+# データを返すモデル
+class UserOut(BaseModel):
+    username: str
+    email: EmailStr
+    full_name: Optional[str] = None
+
+
+# response_modelを指定して、パスワードが含まれていないUserOutモデルに切り替え
+@app.post("/user/", response_model=UserOut)
+async def create_user(user: UserIn):
+    return user
+
+```
 
 ## Extra Models
 
