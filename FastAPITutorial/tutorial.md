@@ -997,6 +997,47 @@ async def update_item(item_id: int, item: Item):
 
 + JSONスキーマに追加の情報を定義することもできる
   + 一般的な例として、サンプル情報
+  + クラスのFieldやレスポンスBodyにも追加することができる
+
+### Pydantic schema_extra
+
++ スキーマのサンプルを宣言できる
+  + Configとschema_extraを使う
+
+```py
+from typing import Optional
+
+from fastapi import FastAPI
+from pydantic import BaseModel
+
+app = FastAPI()
+
+
+class Item(BaseModel):
+    name: str
+    description: Optional[str] = None
+    price: float
+    tax: Optional[float] = None
+
+
+    # Itemクラスの内部で、Configクラスを記述
+    # schema_extraの内部に、サンプルを記述 (key, valueの形式)
+    # JSON Schemaにそのまま追加される
+    class Config:
+        schema_extra = {
+            "example": {
+                "name": "Foo",
+                "description": "A very nice Item",
+                "price": 35.4,
+                "tax": 3.2,
+            }
+        }
+
+@app.put("/items/{item_id}")
+async def update_item(item_id: int, item: Item):
+    results = {"item_id": item_id, "item": item}
+    return results
+```
 
 ## Extra Data Types
 
