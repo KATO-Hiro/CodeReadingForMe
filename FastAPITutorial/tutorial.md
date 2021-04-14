@@ -1057,6 +1057,22 @@ async def update_item(item_id: int, item: Item):
 
 + Query, Path, Cookieと同様。
 
+```py
+from typing import Optional
+
+from fastapi import FastAPI, Header # インポート
+
+app = FastAPI()
+
+
+@app.get("/items/")
+async def read_items(user_agent: Optional[str] = Header(None)):
+    return {"User-Agent": user_agent}
+
+```
+
++ Q: レスポンスBodyと含めて、値を返していいのか?
+
 ## Response Model
 
 + @app.xxxで、指定
