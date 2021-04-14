@@ -417,7 +417,7 @@ app = FastAPI()
 
 fake_items_db = [{"item_name": "Foo"}, {"item_name": "Bar"}, {"item_name": "Baz"}]
 
-
+# http://127.0.0.1:8000/items/?skip=0&limit=10
 @app.get("/items/")
 async def read_item(skip: int = 0, limit: int = 10):
     return fake_items_db[skip : skip + limit]
@@ -444,6 +444,7 @@ app = FastAPI()
 
 
 # Optionalを使って、デフォルト値をNoneに指定することもできる
+# FastAPIでは、q = Noneでoptionalと判定している
 @app.get("/items/{item_id}")
 async def read_item(item_id: str, q: Optional[str] = None):
     if q:
@@ -518,7 +519,7 @@ from fastapi import FastAPI
 
 app = FastAPI()
 
-
+# hoge = default_valueのデフォルト値を外すだけ
 @app.get("/items/{item_id}")
 async def read_user_item(item_id: str, needy: str):
     item = {"item_id": item_id, "needy": needy}
@@ -541,7 +542,7 @@ from fastapi import FastAPI
 app = FastAPI()
 
 
-# クエリパラメータにデフォルト値や任意の値を指定することもできる
+# クエリパラメータにデフォルト値や任意の値を指定することもできる = 組み合わせることができる
 # needy: 必須
 # skip: int型。デフォルト値が0
 # limit: int型。任意の値。
@@ -561,7 +562,7 @@ async def read_user_item(
   + API側: ほぼ必須
   + clients側: いつも必要ではない
 
-  + POSTメソッドを使うのが一般的
+  + POSTメソッドを使うのが一般的(PUT, DELETE or PATCH)
 
 ```py
 # 1. BaseModelをpydanticからインポート
@@ -569,12 +570,14 @@ async def read_user_item(
 from typing import Optional
 
 from fastapi import FastAPI
-from pydantic import BaseModel
+from pydantic import BaseModel # TODO: コードの中身を確認する
 
 
 # BaseModelを継承
-# 属性: 型を指定
+# 属性: 型の順番で指定
 # デフォルト値を設定することもできる
+# ex: attr: type = default_value
+# 任意の値の場合は、Noneを指定する(JSONオブジェクトに、descriptionやtaxがないケースもある)
 class Item(BaseModel):
     name: str
     description: Optional[str] = None
@@ -628,7 +631,9 @@ app = FastAPI()
 async def create_item(item: Item):
     item_dict = item.dict()
     if item.tax:
+        # モデルオブジェクトに直接アクセスできる
         price_with_tax = item.price + item.tax
+        # 動的にdictに属性をすることもできる
         item_dict.update({"price_with_tax": price_with_tax})
     return item_dict
 ```
@@ -657,6 +662,7 @@ app = FastAPI()
 
 @app.put("/items/{item_id}")
 async def create_item(item_id: int, item: Item):
+    # Q: なぜ、**をつけている?
     return {"item_id": item_id, **item.dict()}
 ```
 
@@ -688,6 +694,10 @@ async def create_item(item_id: int, item: Item, q: Optional[str] = None):
         result.update({"q": q})
     return result
 ```
+
+### Without Pydantic
+
+- Pydanticの代わりに、Body parametersを使うこともできる
 
 ## Query Parameters and String Validations
 
