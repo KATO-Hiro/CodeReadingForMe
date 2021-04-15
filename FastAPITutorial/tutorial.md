@@ -47,13 +47,15 @@ pip install uvicorn
 from typing import Optional
 
 # FastAPIをインポート
+# Starletteを直接継承しているため、その機能を全て利用できる
 from fastapi import FastAPI
 
 # インスタンスを作成
+# 名称は、appでなくてもよい
 app = FastAPI()
 
 
-# デコレータで、HTTPメソッドとルーティングを指定
+# デコレータで、HTTPメソッドとルーティング(パス、エンドポイント)を指定
 # 関数を定義して、値を返す
 @app.get("/")
 async def root():
@@ -196,6 +198,10 @@ async def root():
 @app.post() # to create data
 @app.put() # to update data
 @app.delete()
+@app.options()
+@app.head()
+@app.patch()
+@app.trace()
 ```
 
 ```py
@@ -207,6 +213,8 @@ app = FastAPI()
 
 # Pythonの関数として記述する
 # async: 非同期処理。使わない場合は、外す。
+# Q: メソッド名のルールは、どうなっている?
+# A: 公式チュートリアルでは、動詞_名詞の形式になっている。
 @app.get("/")
 async def root():
     # Step 5: return the content
@@ -217,6 +225,14 @@ async def root():
 # 開発サーバを起動・リロードする
 ```
 
+#### Recap
+
++ Import FastAPI
++ appインスタンスを作成
++ path operation decoratorを書く (@app.get("/"))
++ path operation functionを書く (def root(): ...)
++ 開発サーバを起動・リロード
+
 ## Path Parameters
 
 ```py
@@ -226,6 +242,7 @@ app = FastAPI()
 
 # パスのパラメータや変数は、Pythonの形式と同じシンタックス
 # パスパラメータのitemd_idは、関数内でitem_id変数として扱われる
+# "hoges/{hoge_id}"のように、/複数形/単数形_idの形式になっている
 @app.get("/items/{item_id}")
 async def read_item(item_id):
     return {"item_id": item_id}
@@ -298,7 +315,7 @@ from fastapi import FastAPI
 app = FastAPI()
 
 
-# パスは、順番に評価される
+# パスは、上から順番に評価される
 # 逆にすると、meが{user_id}に入る
 @app.get("/users/me")
 async def read_user_me():
@@ -322,7 +339,9 @@ from fastapi import FastAPI
 
 
 # str, Enumを継承する
+# Q: 継承の順番は影響がある?
 class ModelName(str, Enum):
+    # 属性名 = 値
     alexnet = "alexnet"
     resnet = "resnet"
     lenet = "lenet"
@@ -332,8 +351,11 @@ app = FastAPI()
 
 
 # 引数の型に自作のクラスを取ることもできる
+# 型の部分に、自作のクラスを指定するだけ
 @app.get("/model/{model_name}")
 async def get_model(model_name: ModelName):
+    # Q: 条件が増えてきたときは、どうする?
+    # A: デザインパターンのFactory methodを利用するか?
     # ClassName.attrの形式で利用できる
     if model_name == ModelName.alexnet:
         # 戻り値にmodel_nameを取ることもできる
@@ -343,6 +365,7 @@ async def get_model(model_name: ModelName):
     if model_name.value == "lenet":
         return {"model_name": model_name, "message": "LeCNN all the images"}
 
+    # 戻り値に、パスの値を返すこともできる。入れ子になった値も可能。
     return {"model_name": model_name, "message": "Have some residuals"}
 ```
 
@@ -376,7 +399,7 @@ async def read_file(file_path: str):
 
 ### Recap
 
-+ Pythonの型宣言による効果により、一度の定義すれば以下の効果が得られる
++ Pythonの型宣言による効果により、一度だけ定義すれば以下の効果が得られる(他のフレームワークと比べたときのメリット)
   + エディタのサポート
   + データのパース
   + バリデーション
@@ -394,7 +417,7 @@ app = FastAPI()
 
 fake_items_db = [{"item_name": "Foo"}, {"item_name": "Bar"}, {"item_name": "Baz"}]
 
-
+# http://127.0.0.1:8000/items/?skip=0&limit=10
 @app.get("/items/")
 async def read_item(skip: int = 0, limit: int = 10):
     return fake_items_db[skip : skip + limit]
@@ -421,6 +444,7 @@ app = FastAPI()
 
 
 # Optionalを使って、デフォルト値をNoneに指定することもできる
+# FastAPIでは、q = Noneでoptionalと判定している
 @app.get("/items/{item_id}")
 async def read_item(item_id: str, q: Optional[str] = None):
     if q:
@@ -495,7 +519,7 @@ from fastapi import FastAPI
 
 app = FastAPI()
 
-
+# hoge = default_valueのデフォルト値を外すだけ
 @app.get("/items/{item_id}")
 async def read_user_item(item_id: str, needy: str):
     item = {"item_id": item_id, "needy": needy}
@@ -518,7 +542,7 @@ from fastapi import FastAPI
 app = FastAPI()
 
 
-# クエリパラメータにデフォルト値や任意の値を指定することもできる
+# クエリパラメータにデフォルト値や任意の値を指定することもできる = 組み合わせることができる
 # needy: 必須
 # skip: int型。デフォルト値が0
 # limit: int型。任意の値。
@@ -538,7 +562,7 @@ async def read_user_item(
   + API側: ほぼ必須
   + clients側: いつも必要ではない
 
-  + POSTメソッドを使うのが一般的
+  + POSTメソッドを使うのが一般的(PUT, DELETE or PATCH)
 
 ```py
 # 1. BaseModelをpydanticからインポート
@@ -546,12 +570,14 @@ async def read_user_item(
 from typing import Optional
 
 from fastapi import FastAPI
-from pydantic import BaseModel
+from pydantic import BaseModel # TODO: コードの中身を確認する
 
 
 # BaseModelを継承
-# 属性: 型を指定
+# 属性: 型の順番で指定
 # デフォルト値を設定することもできる
+# ex: attr: type = default_value
+# 任意の値の場合は、Noneを指定する(JSONオブジェクトに、descriptionやtaxがないケースもある)
 class Item(BaseModel):
     name: str
     description: Optional[str] = None
@@ -605,7 +631,9 @@ app = FastAPI()
 async def create_item(item: Item):
     item_dict = item.dict()
     if item.tax:
+        # モデルオブジェクトに直接アクセスできる
         price_with_tax = item.price + item.tax
+        # 動的にdictに属性をすることもできる
         item_dict.update({"price_with_tax": price_with_tax})
     return item_dict
 ```
@@ -634,6 +662,7 @@ app = FastAPI()
 
 @app.put("/items/{item_id}")
 async def create_item(item_id: int, item: Item):
+    # Q: なぜ、**をつけている?
     return {"item_id": item_id, **item.dict()}
 ```
 
@@ -665,6 +694,10 @@ async def create_item(item_id: int, item: Item, q: Optional[str] = None):
         result.update({"q": q})
     return result
 ```
+
+### Without Pydantic
+
+- Pydanticの代わりに、Body parametersを使うこともできる
 
 ## Query Parameters and String Validations
 
@@ -813,7 +846,7 @@ async def read_items(q: Optional[List[str]] = Query(None)):
 + 一般的なバリデーションとメタデータ
   + alias: Pythonで有効ではない変数名をパラメータとして使うときの別名を指定できる
   + title:
-  + description
+  + description: クエリパラメータに関する説明を追加
   + deprecated: バラメータを廃止することを明示
 
 ## Path Parameters and Numeric Validations
@@ -835,7 +868,125 @@ async def read_items(q: Optional[List[str]] = Query(None)):
 
 + Pydantic's Fieldを使うことで、Pydantic modelの内部の検証とメタデータが定義できる
 
+```py
+from typing import Optional
+
+from fastapi import Body, FastAPI
+
+from pydantic import BaseModel, Field # Fieldをpydanticから直接インポート
+
+
+app = FastAPI()
+
+
+class Item(BaseModel):
+    name: str
+    description: Optional[str] = Field(
+        None, title="The description of the item", max_length=300
+    ) # 個別に検証できる。QueryやPath, Bodyと同じように書くことができる。
+    price: float = Field(..., gt=0, description="The price must be greater than zero")
+    tax: Optional[float] = None
+
+
+@app.put("/items/{item_id}")
+async def update_item(item_id: int, item: Item = Body(..., embed=True)):
+    results = {"item_id": item_id, "item": item}
+    return results
+
+```
+
 ## Body - Nested Models
+
+### List fields with type parameter
+
+```py
+from typing import List, Optional # Listをインポート
+
+from fastapi import FastAPI
+from pydantic import BaseModel
+
+app = FastAPI()
+
+
+class Item(BaseModel):
+    name: str
+    description: Optional[str] = None
+    price: float
+    tax: Optional[float] = None
+    tags: List[str] = [] # List[type]と記述する。このケースでは、stringのリストになる
+
+
+@app.put("/items/{item_id}")
+async def update_item(item_id: int, item: Item):
+    results = {"item_id": item_id, "item": item}
+    return results
+
+```
+
+### Nested Models
+
+```py
+from typing import Optional, Set
+
+from fastapi import FastAPI
+from pydantic import BaseModel
+
+app = FastAPI()
+
+
+# サブモデルの定義
+class Image(BaseModel):
+    url: str
+    name: str
+
+
+class Item(BaseModel):
+    name: str
+    description: Optional[str] = None
+    price: float
+    tax: Optional[float] = None
+    tags: Set[str] = []
+    image: Optional[Image] = None # サブモデルを属性の型として使う
+
+
+@app.put("/items/{item_id}")
+async def update_item(item_id: int, item: Item):
+    results = {"item_id": item_id, "item": item}
+    return results
+```
+
+### Attributes with lists of submodels
+
++ サブモデルのlistやsetを定義することもできる
+
+```py
+from typing import List, Optional, Set
+
+from fastapi import FastAPI
+from pydantic import BaseModel, HttpUrl
+
+app = FastAPI()
+
+
+class Image(BaseModel):
+    url: HttpUrl
+    name: str
+
+
+class Item(BaseModel):
+    name: str
+    description: Optional[str] = None
+    price: float
+    tax: Optional[float] = None
+    tags: Set[str] = set()
+    images: Optional[List[Image]] = None # List[]やSet[]で囲むだけ
+
+
+@app.put("/items/{item_id}")
+async def update_item(item_id: int, item: Item):
+    results = {"item_id": item_id, "item": item}
+    return results
+```
 
 + Pydanticにより、ネストしたモデルを利用することができる。
   + 任意の階層を定義できる
@@ -846,6 +997,47 @@ async def read_items(q: Optional[List[str]] = Query(None)):
 
 + JSONスキーマに追加の情報を定義することもできる
   + 一般的な例として、サンプル情報
+  + クラスのFieldやレスポンスBodyにも追加することができる
+
+### Pydantic schema_extra
+
++ スキーマのサンプルを宣言できる
+  + Configとschema_extraを使う
+
+```py
+from typing import Optional
+
+from fastapi import FastAPI
+from pydantic import BaseModel
+
+app = FastAPI()
+
+
+class Item(BaseModel):
+    name: str
+    description: Optional[str] = None
+    price: float
+    tax: Optional[float] = None
+
+
+    # Itemクラスの内部で、Configクラスを記述
+    # schema_extraの内部に、サンプルを記述 (key, valueの形式)
+    # JSON Schemaにそのまま追加される
+    class Config:
+        schema_extra = {
+            "example": {
+                "name": "Foo",
+                "description": "A very nice Item",
+                "price": 35.4,
+                "tax": 3.2,
+            }
+        }
+
+@app.put("/items/{item_id}")
+async def update_item(item_id: int, item: Item):
+    results = {"item_id": item_id, "item": item}
+    return results
+```
 
 ## Extra Data Types
 
@@ -865,11 +1057,62 @@ async def read_items(q: Optional[List[str]] = Query(None)):
 
 + Query, Path, Cookieと同様。
 
+```py
+from typing import Optional
+
+from fastapi import FastAPI, Header # インポート
+
+app = FastAPI()
+
+
+@app.get("/items/")
+async def read_items(user_agent: Optional[str] = Header(None)):
+    return {"User-Agent": user_agent}
+
+```
+
++ Q: レスポンスBodyと含めて、値を返していいのか?
+
 ## Response Model
 
 + @app.xxxで、指定
++ `response_model`を使う
 + モデルを別途作成し、レスポンスに含めない情報を指定できる
   + 例: パスワード
+
+### Add an output model
+
+```py
+from typing import Optional
+
+from fastapi import FastAPI
+from pydantic import BaseModel, EmailStr
+
+app = FastAPI()
+
+
+# 危険: ユーザのプレーンパスワードをresponseに絶対入れてはならない
+# データを受け取るときのモデル
+class UserIn(BaseModel):
+    username: str
+    password: str
+    email: EmailStr
+    full_name: Optional[str] = None
+
+
+# データを返すモデル
+class UserOut(BaseModel):
+    username: str
+    email: EmailStr
+    full_name: Optional[str] = None
+
+
+# response_modelを指定して、パスワードが含まれていないUserOutモデルに切り替え
+@app.post("/user/", response_model=UserOut)
+async def create_user(user: UserIn):
+    return user
+
+```
 
 ## Extra Models
 
@@ -879,6 +1122,60 @@ async def read_items(q: Optional[List[str]] = Query(None)):
   + パスワードあり
   + パスワードなし
   + ハッシュ化したパスワード(DB保存用)
+
+### Reduce duplication
+
++ コードの重複をなくすための工夫
+
+```py
+from typing import Optional
+
+from fastapi import FastAPI
+from pydantic import BaseModel, EmailStr
+
+app = FastAPI()
+
+
+
+# 基本となるクラス
+class UserBase(BaseModel):
+    username: str
+    email: EmailStr
+    full_name: Optional[str] = None
+
+
+# UserBaseを継承したクラスで、差分を記述する
+class UserIn(UserBase):
+    password: str
+
+
+class UserOut(UserBase):
+    pass
+
+
+class UserInDB(UserBase):
+    hashed_password: str
+
+
+# パスワードのハッシュ化(ダミー)
+def fake_password_hasher(raw_password: str):
+    return "supersecret" + raw_password
+
+
+# ダミーのDB操作
+def fake_save_user(user_in: UserIn):
+    hashed_password = fake_password_hasher(user_in.password)
+    user_in_db = UserInDB(**user_in.dict(), hashed_password=hashed_password)
+    print("User saved! ..not really")
+    return user_in_db
+
+
+@app.post("/user/", response_model=UserOut)
+async def create_user(user_in: UserIn):
+    user_saved = fake_save_user(user_in)
+    return user_saved
+
+```
 
 ## Response Status Code
 
@@ -958,17 +1255,178 @@ async def read_item(item_id: str):
 
 + tagsで、パスの区分をドキュメントに反映させる
 
+```py
+from typing import Optional, Set
+
+from fastapi import FastAPI
+from pydantic import BaseModel
+
+app = FastAPI()
+
+
+class Item(BaseModel):
+    name: str
+    description: Optional[str] = None
+    price: float
+    tax: Optional[float] = None
+    tags: Set[str] = []
+
+
+# tags=["hoge"]を指定すると、OpenAPI schemaでドキュメントに反映される
+@app.post("/items/", response_model=Item, tags=["items"])
+async def create_item(item: Item):
+    return item
+
+
+@app.get("/items/", tags=["items"])
+async def read_items():
+    return [{"name": "Foo", "price": 42}]
+
+
+@app.get("/users/", tags=["users"])
+async def read_users():
+    return [{"username": "johndoe"}]
+```
+
 ### Summary and description
 
 + APIの要約と説明を追加できる
+
+```py
+from typing import Optional, Set
+
+from fastapi import FastAPI
+from pydantic import BaseModel
+
+app = FastAPI()
+
+
+class Item(BaseModel):
+    name: str
+    description: Optional[str] = None
+    price: float
+    tax: Optional[float] = None
+    tags: Set[str] = []
+
+
+# summary、descriptionに記述
+@app.post(
+    "/items/",
+    response_model=Item,
+    summary="Create an item",
+    description="Create an item with all the information, name, description, price, tax and a set of unique tags",
+
+)
+async def create_item(item: Item):
+    return item
+```
 
 ### Description from docstring
 
 + MarkDown形式で、docstringを利用した記述ができる
 
+```py
+from typing import Optional, Set
+
+from fastapi import FastAPI
+from pydantic import BaseModel
+
+app = FastAPI()
+
+
+class Item(BaseModel):
+    name: str
+    description: Optional[str] = None
+    price: float
+    tax: Optional[float] = None
+    tags: Set[str] = []
+
+
+# ドキュメントの記述例
+@app.post("/items/", response_model=Item, summary="Create an item")
+async def create_item(item: Item):
+    """
+
+    Create an item with all the information:
+
+    - **name**: each item must have a name
+    - **description**: a long description
+    - **price**: required
+    - **tax**: if the item doesn't have tax, you can omit this
+    - **tags**: a set of unique tag strings for this item
+    """
+
+    return item
+```
+
 ### Response description
 
 + レスポンスの説明を追加できる
+
+```py
+from typing import Optional, Set
+
+from fastapi import FastAPI
+from pydantic import BaseModel
+
+app = FastAPI()
+
+
+class Item(BaseModel):
+    name: str
+    description: Optional[str] = None
+    price: float
+    tax: Optional[float] = None
+    tags: Set[str] = []
+
+
+# response_descripiton="hoge"で追記
+@app.post(
+    "/items/",
+    response_model=Item,
+    summary="Create an item",
+    response_description="The created item",
+
+)
+async def create_item(item: Item):
+    """
+    Create an item with all the information:
+
+    - **name**: each item must have a name
+    - **description**: a long description
+    - **price**: required
+    - **tax**: if the item doesn't have tax, you can omit this
+    - **tags**: a set of unique tag strings for this item
+    """
+    return item
+
+```
+
+### Deprecate a path operation
+
++ deprecatedにする場合は、コードを消すのではなく`deprecated`を使う
+
+```py
+from fastapi import FastAPI
+
+app = FastAPI()
+
+
+@app.get("/items/", tags=["items"])
+async def read_items():
+    return [{"name": "Foo", "price": 42}]
+
+
+@app.get("/users/", tags=["users"])
+async def read_users():
+    return [{"username": "johndoe"}]
+
+
+# OpenAPIで非表示となり、利用できなくなる
+@app.get("/elements/", tags=["items"], deprecated=True)
+async def read_elements():
+    return [{"item_id": "Foo"}]
+```
 
 ## JSON Compatible Encoder
 
@@ -1047,8 +1505,272 @@ async def get_db():
 ## Security - First Steps
 
 + ユーザ名とパスワード形式の場合は、数行のコードでセキュリティの基本部分を実装できる
++ OAuth2を利用する
+
+```py
+from fastapi import Depends, FastAPI
+from fastapi.security import OAuth2PasswordBearer # インポート
+
+app = FastAPI()
+
+# 追加
+# callable
+# ex: oauth2_scheme(some, parameters)なので、Depends()とともに使える
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+# Depends()を追記
+@app.get("/items/")
+async def read_items(token: str = Depends(oauth2_scheme)):
+    return {"token": token}
+```
+
++ 上記のコードを実行すると、OpenAPIのUIで認証が要求されるようになる
+
+### The password flow
+
++ `password flow`はOAuth2における`flows`の一つ
+  + セキュリティと認証を扱う
++ OAuth2は、バックエンドやAPIがユーザを認証するサーバから独立できるように設計されていた
++ しかし、FastAPI appでは、APIと認証を処理する
+
++ 認証の手順の概要
+  + フロントエンド側のユーザが`username`と`password`を入力して、`Enter`を押す
+  + フロント側が、上記の情報を特定のAPIに送信する (tokenUrl="token")
+  + APIが`username`と`password`を確認し、`token`を返す
+    + tokenは、ただの文字列で、後からこのユーザを識別するために使う
+    + 通常は、tokenに有効期限が設定されている
+      + ユーザは、しばらくするとログインをし直すことになる
+      + もし、トークンが盗まれたとしても、リスクは少ない。永久的なキーではないので、永遠には動作しない。
+  + フロント側は、tokenを一時的にどこかに保存する
+  + フロント側のユーザは、フロントのappの別のセクションに移動する
+  + フロントは、APIから別のデータを取得する必要がある
+    + 特定のエンドポイントに関しては、認証が必要ある
+    + APIに認証を行うためには、tokenとBearerの値を追加したAuthorizationヘッダーを送信する
+    + tokenにfoobarが含まれていたら、`Authorization`ヘッダーは、Bearer foobarとなる
+
+### FastAPI's OAuth2PasswordBearer
+
++ セキュリティの機能を実装するために、抽象度の異なるツールが提供されている
++ OAuth2とPassword flow, Bearer tokenを使ったサンプル
+  + OAuthPasswordBearerクラスを使う
+
+### What it does
+
++ `Authorization`ヘッダーに関して、Bearerとtokenが`str`として返ってきている
++ なければ、ステータスコード401(UNAUTHORIZED)がそのまま返ってくる
 
 ## Get Current User
+
++ 前章では、`token`を`str`として提供するセキュリティシステムについて示した
+
+### Create a user model
+
+```py
+from typing import Optional
+
+from fastapi import Depends, FastAPI
+from fastapi.security import OAuth2PasswordBearer
+
+from pydantic import BaseModel
+
+
+app = FastAPI()
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+
+
+# 追加
+class User(BaseModel):
+    username: str
+    email: Optional[str] = None
+    full_name: Optional[str] = None
+    disabled: Optional[bool] = None
+
+
+def fake_decode_token(token):
+    return User(
+        username=token + "fakedecoded", email="john@example.com", full_name="John Doe"
+    )
+
+
+async def get_current_user(token: str = Depends(oauth2_scheme)):
+    user = fake_decode_token(token)
+    return user
+
+
+@app.get("/users/me")
+async def read_users_me(current_user: User = Depends(get_current_user)):
+    return current_user
+```
+
+### Create a get_current_user dependency
+
++ 依存関係には、サブの依存関係を持つことができる
+
+```py
+from typing import Optional
+
+from fastapi import Depends, FastAPI
+from fastapi.security import OAuth2PasswordBearer
+from pydantic import BaseModel
+
+app = FastAPI()
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+
+class User(BaseModel):
+    username: str
+    email: Optional[str] = None
+    full_name: Optional[str] = None
+    disabled: Optional[bool] = None
+
+
+def fake_decode_token(token):
+    return User(
+        username=token + "fakedecoded", email="john@example.com", full_name="John Doe"
+    )
+
+
+# tokenをstr型として受け取れるように
+async def get_current_user(token: str = Depends(oauth2_scheme)):
+    user = fake_decode_token(token)
+    return user
+
+
+@app.get("/users/me")
+async def read_users_me(current_user: User = Depends(get_current_user)):
+    return current_user
+
+```
+
+### Get the user
+
+```py
+from typing import Optional
+
+from fastapi import Depends, FastAPI
+from fastapi.security import OAuth2PasswordBearer
+from pydantic import BaseModel
+
+app = FastAPI()
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+
+class User(BaseModel):
+    username: str
+    email: Optional[str] = None
+    full_name: Optional[str] = None
+    disabled: Optional[bool] = None
+
+
+# ダミーのユーティリティ関数で、現在のユーザを作成する
+def fake_decode_token(token):
+    return User(
+
+        username=token + "fakedecoded", email="john@example.com", full_name="John Doe"
+
+    )
+
+
+async def get_current_user(token: str = Depends(oauth2_scheme)):
+    user = fake_decode_token(token)
+
+    return user
+
+
+@app.get("/users/me")
+async def read_users_me(current_user: User = Depends(get_current_user)):
+    return current_user
+
+```
+
+### Inject the current user
+
+```py
+from typing import Optional
+
+from fastapi import Depends, FastAPI
+from fastapi.security import OAuth2PasswordBearer
+from pydantic import BaseModel
+
+app = FastAPI()
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+
+class User(BaseModel):
+    username: str
+    email: Optional[str] = None
+    full_name: Optional[str] = None
+    disabled: Optional[bool] = None
+
+
+def fake_decode_token(token):
+    return User(
+        username=token + "fakedecoded", email="john@example.com", full_name="John Doe"
+    )
+
+
+async def get_current_user(token: str = Depends(oauth2_scheme)):
+    user = fake_decode_token(token)
+    return user
+
+
+# 現在のユーザを追加
+@app.get("/users/me")
+async def read_users_me(current_user: User = Depends(get_current_user)):
+    return current_user
+```
+
+### Other models
+
++ 現在のユーザに対して、セキュリティのメカニズムで直接扱えるようになった
++ どんなモデルやデータに対しても、セキュリティの要求ができる
+
+### Code size
+
++ 複雑に見えるが、セキュリティと依存性の注入に関する記述は、一度かつ一箇所で済む
++ パスの操作に関する記述は、実質3行で済む
+
+```py
+from typing import Optional
+
+from fastapi import Depends, FastAPI
+from fastapi.security import OAuth2PasswordBearer
+from pydantic import BaseModel
+
+app = FastAPI()
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+
+class User(BaseModel):
+    username: str
+    email: Optional[str] = None
+    full_name: Optional[str] = None
+    disabled: Optional[bool] = None
+
+
+def fake_decode_token(token):
+    return User(
+        username=token + "fakedecoded", email="john@example.com", full_name="John Doe"
+    )
+
+
+async def get_current_user(token: str = Depends(oauth2_scheme)):
+    user = fake_decode_token(token)
+    return user
+
+
+# current_user: User = Depends(get_current_user)
+@app.get("/users/me")
+async def read_users_me(current_user: User = Depends(get_current_user)):
+
+    return current_user
+```
 
 + Userモデルを定義
 + 現在のユーザの情報を取得するコードを追加
@@ -1058,6 +1780,242 @@ async def get_db():
 
 + 基本的な実装方法を解説
 + まだ、セキュアではない
+
+### Get the username and password
+
++ `scope`を送信する必要がある
+  + `scope`は文字列
+
++ `OAuth2PasswordRequestForm`はクラス
+  + フォームボディを宣言する
+  + username, password, scope(任意), grant_type(任意), client_id(任意)、client_secret(任意)
+
+### Code to get the username and password
+
+```py
+from typing import Optional
+
+from fastapi import Depends, FastAPI, HTTPException, status # 追加
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm # 追加
+
+from pydantic import BaseModel
+
+fake_users_db = {
+    "johndoe": {
+        "username": "johndoe",
+        "full_name": "John Doe",
+        "email": "johndoe@example.com",
+        "hashed_password": "fakehashedsecret",
+        "disabled": False,
+    },
+    "alice": {
+        "username": "alice",
+        "full_name": "Alice Wonderson",
+        "email": "alice@example.com",
+        "hashed_password": "fakehashedsecret2",
+        "disabled": True,
+    },
+}
+
+app = FastAPI()
+
+
+def fake_hash_password(password: str):
+    return "fakehashed" + password
+
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+
+class User(BaseModel):
+    username: str
+    email: Optional[str] = None
+    full_name: Optional[str] = None
+    disabled: Optional[bool] = None
+
+
+class UserInDB(User):
+    hashed_password: str
+
+
+def get_user(db, username: str):
+    if username in db:
+        user_dict = db[username]
+        return UserInDB(**user_dict)
+
+
+def fake_decode_token(token):
+    # This doesn't provide any security at all
+    # Check the next version
+    user = get_user(fake_users_db, token)
+    return user
+
+
+async def get_current_user(token: str = Depends(oauth2_scheme)):
+    user = fake_decode_token(token)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return user
+
+
+async def get_current_active_user(current_user: User = Depends(get_current_user)):
+    if current_user.disabled:
+        raise HTTPException(status_code=400, detail="Inactive user")
+    return current_user
+
+
+# 追加
+# form_dataにOAuth2PasswordRequestForm型、Depends()を指定
+@app.post("/token")
+async def login(form_data: OAuth2PasswordRequestForm = Depends()):
+
+    user_dict = fake_users_db.get(form_data.username)
+    # ユーザが存在しない場合の処理
+    if not user_dict:
+        raise HTTPException(status_code=400, detail="Incorrect username or password")
+    # key-valueの一つずつ与えた場合と、以下のコードは等価
+    user = UserInDB(**user_dict)
+    # ハッシュ化されたパスワードのチェック
+    hashed_password = fake_hash_password(form_data.password)
+    if not hashed_password == user.hashed_password:
+        raise HTTPException(status_code=400, detail="Incorrect username or password")
+
+    # tokenを返す
+    # access_tokenとtoken_typeが必須
+    return {"access_token": user.username, "token_type": "bearer"}
+
+
+@app.get("/users/me")
+async def read_users_me(current_user: User = Depends(get_current_active_user)):
+    return current_user
+
+```
+
+### Update the dependencies
+
++ ユーザが存在して、かつ認証されており、アクティブなときだけエンドポイントを有効化
+
+```py
+from typing import Optional
+
+from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from pydantic import BaseModel
+
+fake_users_db = {
+    "johndoe": {
+        "username": "johndoe",
+        "full_name": "John Doe",
+        "email": "johndoe@example.com",
+        "hashed_password": "fakehashedsecret",
+        "disabled": False,
+    },
+    "alice": {
+        "username": "alice",
+        "full_name": "Alice Wonderson",
+        "email": "alice@example.com",
+        "hashed_password": "fakehashedsecret2",
+        "disabled": True,
+    },
+}
+
+app = FastAPI()
+
+
+def fake_hash_password(password: str):
+    return "fakehashed" + password
+
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+
+class User(BaseModel):
+    username: str
+    email: Optional[str] = None
+    full_name: Optional[str] = None
+    disabled: Optional[bool] = None
+
+
+class UserInDB(User):
+    hashed_password: str
+
+
+def get_user(db, username: str):
+    if username in db:
+        user_dict = db[username]
+        return UserInDB(**user_dict)
+
+
+def fake_decode_token(token):
+    # This doesn't provide any security at all
+    # Check the next version
+    user = get_user(fake_users_db, token)
+    return user
+
+
+# 追記
+async def get_current_user(token: str = Depends(oauth2_scheme)):
+    user = fake_decode_token(token)
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    return user
+
+
+# 追記
+async def get_current_active_user(current_user: User = Depends(get_current_user)):
+
+    if current_user.disabled:
+        raise HTTPException(status_code=400, detail="Inactive user")
+
+    return current_user
+
+
+@app.post("/token")
+async def login(form_data: OAuth2PasswordRequestForm = Depends()):
+    user_dict = fake_users_db.get(form_data.username)
+    if not user_dict:
+        raise HTTPException(status_code=400, detail="Incorrect username or password")
+    user = UserInDB(**user_dict)
+    hashed_password = fake_hash_password(form_data.password)
+    if not hashed_password == user.hashed_password:
+        raise HTTPException(status_code=400, detail="Incorrect username or password")
+
+    return {"access_token": user.username, "token_type": "bearer"}
+
+
+# 変更
+@app.get("/users/me")
+async def read_users_me(current_user: User = Depends(get_current_active_user)):
+
+    return current_user
+
+```
+
+### See it in action
+
+#### Authenticate
+
++ OpenAPIのUIで"Authorize" buttonをクリック
++ usernameとpasswordを入力
+
+#### Get your own user data
+
++ users/meを実行すると、ユーザ情報が表示される
++ ログアウトしていると未認証となり、401エラーが返ってくる
+
+#### Inactive user
+
++ "inactive user"を受け取るはず
 
 ## OAuth2 with Password (and hashing), Bearer with JWT tokens
 
@@ -1207,6 +2165,8 @@ async def main():
   + Yes
 
 + Pydanticとは?
+  + モデルの定義を便利にしてくれる
+  + バリデーションも行ってくれる?
 
 + Pytestは使える?
   + Yes
