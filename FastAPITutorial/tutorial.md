@@ -2243,7 +2243,9 @@ async def read_own_items(current_user: User = Depends(get_current_active_user)):
 
 ## Middleware
 
-+ ミドルウェア: 特定の操作によって処理される前の全てのリクエストに対して動作する関数。全てのレスポンスを処理してから返す。
++ ミドルウェア: 特定の操作によって処理される前の全てのリクエストに対して動作する関数。全てのレスポンスを処理する前に返す。
+
++ Q: どういうときに使うのか?よく分かっていない
 
 ## CORS (Cross-Origin Resource Sharing)
 
