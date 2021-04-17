@@ -2246,6 +2246,7 @@ async def read_own_items(current_user: User = Depends(get_current_active_user)):
 + ミドルウェア: 特定の操作によって処理される前の全てのリクエストに対して動作する関数。全てのレスポンスを処理する前に返す。
 
 + Q: どういうときに使うのか?よく分かっていない
+  + A: 例えば、次のセクションで紹介されているCORS
 
 ## CORS (Cross-Origin Resource Sharing)
 
@@ -2260,7 +2261,18 @@ async def read_own_items(current_user: User = Depends(get_current_active_user)):
   https://localhost
   http://localhost:8080
 
++ 全てlocalhostであっても、プロトコルやポートが異なれば、違うオリジン
+
 ### 手順
+
++ 前提
+  + フロントエンド: http://localhost:8080
+  + バックエンド: http://localhost (特定のポートを指定しない場合、ブラウザはデフォルトのポート80を仮定する)
+
++ 手順
+  + ブラウザは、バックエンドにHTTP OPTIONSリクエストを送信する
+  + バックエンドは、異なるオリジンからの通信を承認する適切なヘッダーを送信する
+  + ブラウザはフロントエンドのJavaScriptにバックエンドへのリクエストを送信させる
 
 + バックエンドで、"allowed origins"のリストを用意する必要がある
 
@@ -2287,6 +2299,7 @@ origins = [
 
 # 3. middlewareとして追加
 # いくつかのオプションを指定できる
+# 認証情報、HTTPメソッド、HTTPヘッダー
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -2302,6 +2315,8 @@ async def main():
 ```
 
 + 詳しくは、Moziilaのドキュメントを参照する
+
+https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
 
 ## SQL (Relational) Databases
 
