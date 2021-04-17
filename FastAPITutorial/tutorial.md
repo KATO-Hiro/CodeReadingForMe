@@ -2021,9 +2021,232 @@ async def read_users_me(current_user: User = Depends(get_current_active_user)):
 
 + JWTトークンとセキュアなパスワードのハッシュ化を利用して、セキュアなappに
 
++ Q: JWTトークンとは?
+  + A: JSON Web Tokens
+    + JSONオブジェクトで、スペースなしの文字列。
+    + 暗号化されてないので、誰でも元の情報を復元できる
+    + 署名されているため、自分が発行したかどうかを確認できる
++ Q: 普通のトークンとは何が違う?
+
++ この節で紹介されているコードは、実際のappで使用することができる。
+
+### Install python-jose
+
++ JWTトークンの生成と検証をPythonで行うライブラリをインストール
+  + 以前のチュートリアルでは、PyJWTを使っていた
+  + PyJWTの全ての機能＋追加機能
+
+```terminal
+$ pip install python-jose[cryptography]
+```
+
+### Password hashing
+
++ ハッシュ化は、パスワードなどを意味のない文字列に変換すること
++ 同じパスワードを渡しても、全く同じ結果となる
++ ただし、変換された結果を元のパスワードに戻すことはできない
+
+#### Why use password hashing
+
++ DBからデータが盗まれても、パスワードが盗まれないようにする
+  + 悪意のある人物は、別のシステムに対してパスワードを適用しようとする（多くのユーザがパスワードを使いまわしているため）
+
+### Install passlib
+
++ パスワードに関するハッシュを扱うライブラリをインストール
+
+```terminal
+$ pip install passlib[bcrypt]
+```
+
+### Hash and verify the passwords
+
++ 関連するライブラリをインストール
+  + JWTトークンの生成と検証を`python-jose`で行う
+  + パスワードのハッシュ化と検証を`passlib`で行う
++ ユーザのパスワードに対してハッシュを生成・検証
++ 現在のユーザに対して、JWTトークンの復号・検証を行う
++ 認証されたら、JWTアクセストークンの有効期限を生成
++ OpenAPIで、ユーザ名とパスワードを入力し、/users/meを呼び出す
+  + developer toolsで確認できる
+    + 送信されるデータには、トークンだけが含まれている
+    + パスワードは、ユーザ認証を行いアクセストークンを取得する最初のリクエストでのみ送信され、それ以降は送信されない
+
+```py
+from datetime import datetime, timedelta
+from typing import Optional
+
+from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from jose import JWTError, jwt # インポート
+from passlib.context import CryptContext # インポート
+
+from pydantic import BaseModel
+
+# 追記
+# to get a string like this run:
+# openssl rand -hex 32
+# JWT tokenを利用するため、ランダムなシークレットキーを作成する
+# Q: 公開レポジトリに、そのまま記載するのはマズいのでは?
+# ハッシュ化のアルゴリズムとして、"HS256"を指定
+SECRET_KEY = "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7"
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
+
+fake_users_db = {
+    "johndoe": {
+        "username": "johndoe",
+        "full_name": "John Doe",
+        "email": "johndoe@example.com",
+        "hashed_password": "$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW",
+        "disabled": False,
+    }
+}
+
+
+# 追記
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+
+class TokenData(BaseModel):
+    username: Optional[str] = None
+
+
+class User(BaseModel):
+    username: str
+    email: Optional[str] = None
+    full_name: Optional[str] = None
+    disabled: Optional[bool] = None
+
+
+class UserInDB(User):
+    hashed_password: str
+
+
+# パスワードのハッシュ化
+# ハッシュ化するためのアルゴリズムに、Bcryptを指定している
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+app = FastAPI()
+
+
+# パスワードの検証
+def verify_password(plain_password, hashed_password):
+    return pwd_context.verify(plain_password, hashed_password)
+
+
+# パスワードのハッシュ化
+def get_password_hash(password):
+    return pwd_context.hash(password)
+
+
+def get_user(db, username: str):
+    if username in db:
+        user_dict = db[username]
+        return UserInDB(**user_dict)
+
+
+# 追記
+def authenticate_user(fake_db, username: str, password: str):
+    user = get_user(fake_db, username)
+
+    if not user:
+        return False
+    if not verify_password(password, user.hashed_password):
+        return False
+
+    return user
+
+
+# 追記
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
+    to_encode = data.copy() # なぜ、copy()している?
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(minutes=15)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+
+async def get_current_user(token: str = Depends(oauth2_scheme)):
+    # 受け取ったトークンを復号して、不正なら直ちにHTTPエラーを返す
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        # JWTの仕様では、トークンのサブジェクトを含むsubキーがあることが前提とされている
+        # ユーザを識別するために使っている
+        # JWTトークンをユーザやボットに与えると、アカウントを持っていなくても操作を実行できてしまう可能性がある
+        # IDの衝突を避けるために、subキーの前に何らかの値を付与
+        # また、アプリ全体を通してユニークな識別子であることと、文字列である必要がある
+        username: str = payload.get("sub")
+        if username is None:
+            raise credentials_exception
+        token_data = TokenData(username=username)
+    except JWTError:
+        raise credentials_exception
+    user = get_user(fake_users_db, username=token_data.username)
+    if user is None:
+        raise credentials_exception
+    return user
+
+
+async def get_current_active_user(current_user: User = Depends(get_current_user)):
+    if current_user.disabled:
+        raise HTTPException(status_code=400, detail="Inactive user")
+    return current_user
+
+
+# 追記
+@app.post("/token", response_model=Token)
+async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
+    user = authenticate_user(fake_users_db, form_data.username, form_data.password)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user.username}, expires_delta=access_token_expires
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
+
+
+@app.get("/users/me/", response_model=User)
+async def read_users_me(current_user: User = Depends(get_current_active_user)):
+    return current_user
+
+
+@app.get("/users/me/items/")
+async def read_own_items(current_user: User = Depends(get_current_active_user)):
+    return [{"item_id": "Foo", "owner": current_user.username}]
+
+```
+
+### Advanced usage with scopes
+
++ OAuth2には、「スコープ」という概念がある
++ JWTトークンに特定のパーミッションを追加でき、ユーザやサードパーティにそれを与えてAPIと対話できる
++ 詳細は、上級者向けのユーザガイドで
+
 ## Middleware
 
-+ ミドルウェア: 特定の操作によって処理される前の全てのリクエストに対して動作する関数。全てのレスポンスを処理してから返す。
++ ミドルウェア: 特定の操作によって処理される前の全てのリクエストに対して動作する関数。全てのレスポンスを処理する前に返す。
+
++ Q: どういうときに使うのか?よく分かっていない
+  + A: 例えば、次のセクションで紹介されているCORS
 
 ## CORS (Cross-Origin Resource Sharing)
 
@@ -2038,7 +2261,18 @@ async def read_users_me(current_user: User = Depends(get_current_active_user)):
   https://localhost
   http://localhost:8080
 
++ 全てlocalhostであっても、プロトコルやポートが異なれば、違うオリジン
+
 ### 手順
+
++ 前提
+  + フロントエンド: http://localhost:8080
+  + バックエンド: http://localhost (特定のポートを指定しない場合、ブラウザはデフォルトのポート80を仮定する)
+
++ 手順
+  + ブラウザは、バックエンドにHTTP OPTIONSリクエストを送信する
+  + バックエンドは、異なるオリジンからの通信を承認する適切なヘッダーを送信する
+  + ブラウザはフロントエンドのJavaScriptにバックエンドへのリクエストを送信させる
 
 + バックエンドで、"allowed origins"のリストを用意する必要がある
 
@@ -2065,6 +2299,7 @@ origins = [
 
 # 3. middlewareとして追加
 # いくつかのオプションを指定できる
+# 認証情報、HTTPメソッド、HTTPヘッダー
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -2080,6 +2315,8 @@ async def main():
 ```
 
 + 詳しくは、Moziilaのドキュメントを参照する
+
+https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
 
 ## SQL (Relational) Databases
 
@@ -2101,6 +2338,310 @@ async def main():
 + Pydanticモデルの作成
 + CRUD処理
 + FastAPI app
+
+### ORM
+
++ ORMとは、"object-relational mapping" libraryの略
+  + コードのオブジェクトとDBテーブルの関係をマッピングするツール
+  + テーブルやエンティティ間の接続や関係を作成するツールでもある
+
+### File structure
+
++ __init__.pyは、空のファイルを作成する
+  + sql_appに関するモジュール(Pythonファイル)は、パッケージである
+
+```md
+.
+└── sql_app
+    ├── __init__.py
+    ├── crud.py
+    ├── database.py
+    ├── main.py
+    ├── models.py
+    └── schemas.py
+```
+
+### Create the SQLAlchemy parts
+
+```py
+`sql_app/database.py`
+
+# 1. SQLAlchemyに関するモジュールをインポート
+from sqlalchemy import create_engine
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+
+# 2. SQLAlchemyに関するDB URLを作成
+# Q: ユーザ名とパスワードの扱いを開発・ステージング・本番環境で、うまく切り替えるためにはどうする?
+SQLALCHEMY_DATABASE_URL = "sqlite:///./sql_app.db"
+# PostgreSQLを使う場合は、コメントアウトする
+# 他のDBにおいても、ほぼ同様
+# SQLALCHEMY_DATABASE_URL = "postgresql://user:password@postgresserver/db"
+
+# 3. `engine`を作成
+# connect_args={"check_same_thread": Falseは、SQLiteのみ必要
+engine = create_engine(
+    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
+)
+# 4. DB sessionを作成
+# インスタンスを一度作成すると、DB sessionになる
+# Sessionとは区別しており、後で使う
+# SessionLocalをsessionmakerで作成する
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+# 5. Baseクラスを作成する
+# DBモデルやクラスでは、このクラスを継承する
+Base = declarative_base()
+```
+
+### Create the database models
+
+```py
+`sql_app/models.py`
+
+# インポート
+from sqlalchemy import Boolean, Column, ForeignKey, Integer, String
+from sqlalchemy.orm import relationship
+
+
+from .database import Base
+
+
+# Baseを継承
+class User(Base):
+    # テーブル名を指定して、SQLAlchemyのテーブル名として使用する
+    # クラスは単数形、テーブル名は複数形
+    __tablename__ = "users"
+
+    # 各属性は、DBテーブルの列に相当
+    # attr = Column(Type, options)
+    # 主キーやインデックス、デフォルト値の付与ができる
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String, unique=True, index=True)
+    hashed_password = Column(String)
+    is_active = Column(Boolean, default=True)
+
+    # 他のテーブルと関連づけ
+    # 関連のあるクラスと属性を指定
+    # Q: ForeignKeyとの使い分けは?
+    # attr = relationship("ClassName", back_populates="attr_name")
+    items = relationship("Item", back_populates="owner")
+
+
+
+class Item(Base):
+    __tablename__ = "items"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, index=True)
+    description = Column(String, index=True)
+    owner_id = Column(Integer, ForeignKey("users.id")) # 外部キー
+
+    owner = relationship("User", back_populates="items")
+
+```
+
+### Create the Pydantic models
+
++ SQLAlchemy modelsをmodels.py、Pydantic modelsをschemas.pyとする
+  + 自分の理解した限りでは、SQLAlchemyはDB用のテーブルを定義、PydanticはAPIとして返す属性を定義している、と思っている
+
+```py
+`sql_app/schemas.py`
+
+from typing import List, Optional
+
+from pydantic import BaseModel
+
+
+# 共通する属性をXxxBaseクラスで定義
+# SQLAlchemy modelとは、書き方が微妙に異なる
+# Q: 敢えて、違う書き方にしているのか?それとも、偶然?
+class ItemBase(BaseModel):
+    # attr: type = default_valueの形式で記述
+    title: str
+    description: Optional[str] = None
+
+
+# 各クラスでは差分のみを記述する
+class ItemCreate(ItemBase):
+    pass
+
+
+class Item(ItemBase):
+    # IDはItemを作成した段階では不明だが、APIとして読み込むときに必要
+    id: int
+    owner_id: int
+
+    # Pydanticに関する設定を追加
+    # 読み込みに必要なクラスには、orm_mode = Trueを追加する
+    # モデルがdict出なくORMモデルや属性を持つ任意のオブジェクトであっても、データを読むように指示する
+    # PydanticモデルはORMと互換性があり、パス操作の際に`response_model`引数で宣言するだけでよくなる、
+    class Config:
+        orm_mode = True
+
+
+class UserBase(BaseModel):
+    email: str
+
+
+# ユーザを作成するときのみ必要な情報
+class UserCreate(UserBase):
+    password: str
+
+
+class User(UserBase):
+    id: int
+    is_active: bool
+    items: List[Item] = []
+
+    class Config:
+        orm_mode = True
+
+```
+
+### CRUD utils
+
++ DBのデータを操作するための再利用可能な関数を用意
+  + パス操作から切り出すことで、再利用や単体テストがしやすくなる
+
+```py
+`sql_app/crud.py`
+
+# CRUD comes from: Create, Read, Update, and Delete.
+# サンプルでは、creatingとreadingのみを示す
+
+
+# インポート
+# dbパラメータの型宣言や型チェック、補完機能
+from sqlalchemy.orm import Session
+
+from . import models, schemas
+
+
+# 一人のユーザをIDやemailで指定して読む
+# 引数に、dbとユーザidを指定している
+def get_user(db: Session, user_id: int):
+    # db.query(models.PydanticModelName).filter(condition).method()
+    return db.query(models.User).filter(models.User.id == user_id).first()
+
+
+def get_user_by_email(db: Session, email: str):
+    return db.query(models.User).filter(models.User.email == email).first()
+
+
+# 複数のユーザを読む
+# ユーザidの範囲をデフォルト値で指定している
+def get_users(db: Session, skip: int = 0, limit: int = 100):
+    return db.query(models.User).offset(skip).limit(limit).all()
+
+
+def create_user(db: Session, user: schemas.UserCreate):
+    fake_hashed_password = user.password + "notreallyhashed"
+    # SQLAlchemy modelのインスタンスを作成
+    db_user = models.User(email=user.email, hashed_password=fake_hashed_password)
+    db.add(db_user) # db sessionに追加
+    db.commit() # DBに変更を保存
+    db.refresh(db_user) # インスタンスが更新される(IDなどが付与される)
+    return db_user
+
+
+
+def get_items(db: Session, skip: int = 0, limit: int = 100):
+    return db.query(models.Item).offset(skip).limit(limit).all()
+
+
+def create_user_item(db: Session, item: schemas.ItemCreate, user_id: int):
+    # Itemモデルをスマートに記述 + 異なるモデルの属性も注入
+    db_item = models.Item(**item.dict(), owner_id=user_id)
+    db.add(db_item)
+    db.commit()
+    db.refresh(db_item)
+    return db_item
+```
+
+### Main FastAPI app
+
++ これまでに作成したファイルを全て使って統合する
+
+```py
+`sql_app/main.py`
+
+from typing import List
+
+from fastapi import Depends, FastAPI, HTTPException
+from sqlalchemy.orm import Session
+
+from . import crud, models, schemas
+from .database import SessionLocal, engine
+
+
+# DBテーブルを作成
+# 通常はAlembicを使ってDBを初期化する
+# マイグレーションは、SQLAlchemy modelの構造を変更したら、いつでも変更する必要がある
+# 属性の追加、テーブルの追加など
+models.Base.metadata.create_all(bind=engine)
+
+app = FastAPI()
+
+
+# リクエストごとに独立したdb session/connectionが必要
+# 全てのリクエストで同じセッションを使い、終了したら閉じる
+# Dependency
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+# パス操作を行う関数で、dbをSession型のパラメータとして使う
+# 基本的には、crud.pyで作成した関数を呼び出すだけ
+# 不正な操作があったときは、HTTPに関するエラーを返す
+# response_modelでschemas.Hogeを指定する
+# SQLAlchemyではawaitの利用に関する互換性がないため、defを利用する
+@app.post("/users/", response_model=schemas.User)
+def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
+    db_user = crud.get_user_by_email(db, email=user.email)
+    if db_user:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    return crud.create_user(db=db, user=user)
+
+
+# Pydantic modelでorm_modeがTrueなら、List[]で指定することも可能
+@app.get("/users/", response_model=List[schemas.User])
+def read_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    users = crud.get_users(db, skip=skip, limit=limit)
+    return users
+
+
+@app.get("/users/{user_id}", response_model=schemas.User)
+def read_user(user_id: int, db: Session = Depends(get_db)):
+    db_user = crud.get_user(db, user_id=user_id)
+    if db_user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    return db_user
+
+
+@app.post("/users/{user_id}/items/", response_model=schemas.Item)
+def create_item_for_user(
+    user_id: int, item: schemas.ItemCreate, db: Session = Depends(get_db)
+):
+    return crud.create_user_item(db=db, item=item, user_id=user_id)
+
+
+@app.get("/items/", response_model=List[schemas.Item])
+def read_items(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    items = crud.get_items(db, skip=skip, limit=limit)
+    return items
+```
+
+### Migrations
+
++ DBマイグレーションをAlembicで直接実行できる
+  + FastAPIではSQLAlchemyを直接利用しており、他のプラグインを利用していないため
++ SQLAlchemyや他のユーティリティに関する部分を、FastAPIに関連させずに利用することができる
 
 ## Bigger Applications - Multiple Files
 
