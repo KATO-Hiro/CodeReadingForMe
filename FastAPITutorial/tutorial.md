@@ -2021,6 +2021,226 @@ async def read_users_me(current_user: User = Depends(get_current_active_user)):
 
 + JWTトークンとセキュアなパスワードのハッシュ化を利用して、セキュアなappに
 
++ Q: JWTトークンとは?
+  + A: JSON Web Tokens
+    + JSONオブジェクトで、スペースなしの文字列。
+    + 暗号化されてないので、誰でも元の情報を復元できる
+    + 署名されているため、自分が発行したかどうかを確認できる
++ Q: 普通のトークンとは何が違う?
+
++ この節で紹介されているコードは、実際のappで使用することができる。
+
+### Install python-jose
+
++ JWTトークンの生成と検証をPythonで行うライブラリをインストール
+  + 以前のチュートリアルでは、PyJWTを使っていた
+  + PyJWTの全ての機能＋追加機能
+
+```terminal
+$ pip install python-jose[cryptography]
+```
+
+### Password hashing
+
++ ハッシュ化は、パスワードなどを意味のない文字列に変換すること
++ 同じパスワードを渡しても、全く同じ結果となる
++ ただし、変換された結果を元のパスワードに戻すことはできない
+
+#### Why use password hashing
+
++ DBからデータが盗まれても、パスワードが盗まれないようにする
+  + 悪意のある人物は、別のシステムに対してパスワードを適用しようとする（多くのユーザがパスワードを使いまわしているため）
+
+### Install passlib
+
++ パスワードに関するハッシュを扱うライブラリをインストール
+
+```terminal
+$ pip install passlib[bcrypt]
+```
+
+### Hash and verify the passwords
+
++ 関連するライブラリをインストール
+  + JWTトークンの生成と検証を`python-jose`で行う
+  + パスワードのハッシュ化と検証を`passlib`で行う
++ ユーザのパスワードに対してハッシュを生成・検証
++ 現在のユーザに対して、JWTトークンの復号・検証を行う
++ 認証されたら、JWTアクセストークンの有効期限を生成
++ OpenAPIで、ユーザ名とパスワードを入力し、/users/meを呼び出す
+  + developer toolsで確認できる
+    + 送信されるデータには、トークンだけが含まれている
+    + パスワードは、ユーザ認証を行いアクセストークンを取得する最初のリクエストでのみ送信され、それ以降は送信されない
+
+```py
+from datetime import datetime, timedelta
+from typing import Optional
+
+from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from jose import JWTError, jwt # インポート
+from passlib.context import CryptContext # インポート
+
+from pydantic import BaseModel
+
+# 追記
+# to get a string like this run:
+# openssl rand -hex 32
+# JWT tokenを利用するため、ランダムなシークレットキーを作成する
+# Q: 公開レポジトリに、そのまま記載するのはマズいのでは?
+# ハッシュ化のアルゴリズムとして、"HS256"を指定
+SECRET_KEY = "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7"
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
+
+fake_users_db = {
+    "johndoe": {
+        "username": "johndoe",
+        "full_name": "John Doe",
+        "email": "johndoe@example.com",
+        "hashed_password": "$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW",
+        "disabled": False,
+    }
+}
+
+
+# 追記
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+
+class TokenData(BaseModel):
+    username: Optional[str] = None
+
+
+class User(BaseModel):
+    username: str
+    email: Optional[str] = None
+    full_name: Optional[str] = None
+    disabled: Optional[bool] = None
+
+
+class UserInDB(User):
+    hashed_password: str
+
+
+# パスワードのハッシュ化
+# ハッシュ化するためのアルゴリズムに、Bcryptを指定している
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+app = FastAPI()
+
+
+# パスワードの検証
+def verify_password(plain_password, hashed_password):
+    return pwd_context.verify(plain_password, hashed_password)
+
+
+# パスワードのハッシュ化
+def get_password_hash(password):
+    return pwd_context.hash(password)
+
+
+def get_user(db, username: str):
+    if username in db:
+        user_dict = db[username]
+        return UserInDB(**user_dict)
+
+
+# 追記
+def authenticate_user(fake_db, username: str, password: str):
+    user = get_user(fake_db, username)
+
+    if not user:
+        return False
+    if not verify_password(password, user.hashed_password):
+        return False
+
+    return user
+
+
+# 追記
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
+    to_encode = data.copy() # なぜ、copy()している?
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(minutes=15)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+
+async def get_current_user(token: str = Depends(oauth2_scheme)):
+    # 受け取ったトークンを復号して、不正なら直ちにHTTPエラーを返す
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        # JWTの仕様では、トークンのサブジェクトを含むsubキーがあることが前提とされている
+        # ユーザを識別するために使っている
+        # JWTトークンをユーザやボットに与えると、アカウントを持っていなくても操作を実行できてしまう可能性がある
+        # IDの衝突を避けるために、subキーの前に何らかの値を付与
+        # また、アプリ全体を通してユニークな識別子であることと、文字列である必要がある
+        username: str = payload.get("sub")
+        if username is None:
+            raise credentials_exception
+        token_data = TokenData(username=username)
+    except JWTError:
+        raise credentials_exception
+    user = get_user(fake_users_db, username=token_data.username)
+    if user is None:
+        raise credentials_exception
+    return user
+
+
+async def get_current_active_user(current_user: User = Depends(get_current_user)):
+    if current_user.disabled:
+        raise HTTPException(status_code=400, detail="Inactive user")
+    return current_user
+
+
+# 追記
+@app.post("/token", response_model=Token)
+async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
+    user = authenticate_user(fake_users_db, form_data.username, form_data.password)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user.username}, expires_delta=access_token_expires
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
+
+
+@app.get("/users/me/", response_model=User)
+async def read_users_me(current_user: User = Depends(get_current_active_user)):
+    return current_user
+
+
+@app.get("/users/me/items/")
+async def read_own_items(current_user: User = Depends(get_current_active_user)):
+    return [{"item_id": "Foo", "owner": current_user.username}]
+
+```
+
+### Advanced usage with scopes
+
++ OAuth2には、「スコープ」という概念がある
++ JWTトークンに特定のパーミッションを追加でき、ユーザやサードパーティにそれを与えてAPIと対話できる
++ 詳細は、上級者向けのユーザガイドで
+
 ## Middleware
 
 + ミドルウェア: 特定の操作によって処理される前の全てのリクエストに対して動作する関数。全てのレスポンスを処理してから返す。
