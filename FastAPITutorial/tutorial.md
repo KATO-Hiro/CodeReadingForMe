@@ -2339,6 +2339,310 @@ https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
 + CRUD処理
 + FastAPI app
 
+### ORM
+
++ ORMとは、"object-relational mapping" libraryの略
+  + コードのオブジェクトとDBテーブルの関係をマッピングするツール
+  + テーブルやエンティティ間の接続や関係を作成するツールでもある
+
+### File structure
+
++ __init__.pyは、空のファイルを作成する
+  + sql_appに関するモジュール(Pythonファイル)は、パッケージである
+
+```md
+.
+└── sql_app
+    ├── __init__.py
+    ├── crud.py
+    ├── database.py
+    ├── main.py
+    ├── models.py
+    └── schemas.py
+```
+
+### Create the SQLAlchemy parts
+
+```py
+`sql_app/database.py`
+
+# 1. SQLAlchemyに関するモジュールをインポート
+from sqlalchemy import create_engine
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+
+# 2. SQLAlchemyに関するDB URLを作成
+# Q: ユーザ名とパスワードの扱いを開発・ステージング・本番環境で、うまく切り替えるためにはどうする?
+SQLALCHEMY_DATABASE_URL = "sqlite:///./sql_app.db"
+# PostgreSQLを使う場合は、コメントアウトする
+# 他のDBにおいても、ほぼ同様
+# SQLALCHEMY_DATABASE_URL = "postgresql://user:password@postgresserver/db"
+
+# 3. `engine`を作成
+# connect_args={"check_same_thread": Falseは、SQLiteのみ必要
+engine = create_engine(
+    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
+)
+# 4. DB sessionを作成
+# インスタンスを一度作成すると、DB sessionになる
+# Sessionとは区別しており、後で使う
+# SessionLocalをsessionmakerで作成する
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+# 5. Baseクラスを作成する
+# DBモデルやクラスでは、このクラスを継承する
+Base = declarative_base()
+```
+
+### Create the database models
+
+```py
+`sql_app/models.py`
+
+# インポート
+from sqlalchemy import Boolean, Column, ForeignKey, Integer, String
+from sqlalchemy.orm import relationship
+
+
+from .database import Base
+
+
+# Baseを継承
+class User(Base):
+    # テーブル名を指定して、SQLAlchemyのテーブル名として使用する
+    # クラスは単数形、テーブル名は複数形
+    __tablename__ = "users"
+
+    # 各属性は、DBテーブルの列に相当
+    # attr = Column(Type, options)
+    # 主キーやインデックス、デフォルト値の付与ができる
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String, unique=True, index=True)
+    hashed_password = Column(String)
+    is_active = Column(Boolean, default=True)
+
+    # 他のテーブルと関連づけ
+    # 関連のあるクラスと属性を指定
+    # Q: ForeignKeyとの使い分けは?
+    # attr = relationship("ClassName", back_populates="attr_name")
+    items = relationship("Item", back_populates="owner")
+
+
+
+class Item(Base):
+    __tablename__ = "items"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, index=True)
+    description = Column(String, index=True)
+    owner_id = Column(Integer, ForeignKey("users.id")) # 外部キー
+
+    owner = relationship("User", back_populates="items")
+
+```
+
+### Create the Pydantic models
+
++ SQLAlchemy modelsをmodels.py、Pydantic modelsをschemas.pyとする
+  + 自分の理解した限りでは、SQLAlchemyはDB用のテーブルを定義、PydanticはAPIとして返す属性を定義している、と思っている
+
+```py
+`sql_app/schemas.py`
+
+from typing import List, Optional
+
+from pydantic import BaseModel
+
+
+# 共通する属性をXxxBaseクラスで定義
+# SQLAlchemy modelとは、書き方が微妙に異なる
+# Q: 敢えて、違う書き方にしているのか?それとも、偶然?
+class ItemBase(BaseModel):
+    # attr: type = default_valueの形式で記述
+    title: str
+    description: Optional[str] = None
+
+
+# 各クラスでは差分のみを記述する
+class ItemCreate(ItemBase):
+    pass
+
+
+class Item(ItemBase):
+    # IDはItemを作成した段階では不明だが、APIとして読み込むときに必要
+    id: int
+    owner_id: int
+
+    # Pydanticに関する設定を追加
+    # 読み込みに必要なクラスには、orm_mode = Trueを追加する
+    # モデルがdict出なくORMモデルや属性を持つ任意のオブジェクトであっても、データを読むように指示する
+    # PydanticモデルはORMと互換性があり、パス操作の際に`response_model`引数で宣言するだけでよくなる、
+    class Config:
+        orm_mode = True
+
+
+class UserBase(BaseModel):
+    email: str
+
+
+# ユーザを作成するときのみ必要な情報
+class UserCreate(UserBase):
+    password: str
+
+
+class User(UserBase):
+    id: int
+    is_active: bool
+    items: List[Item] = []
+
+    class Config:
+        orm_mode = True
+
+```
+
+### CRUD utils
+
++ DBのデータを操作するための再利用可能な関数を用意
+  + パス操作から切り出すことで、再利用や単体テストがしやすくなる
+
+```py
+`sql_app/crud.py`
+
+# CRUD comes from: Create, Read, Update, and Delete.
+# サンプルでは、creatingとreadingのみを示す
+
+
+# インポート
+# dbパラメータの型宣言や型チェック、補完機能
+from sqlalchemy.orm import Session
+
+from . import models, schemas
+
+
+# 一人のユーザをIDやemailで指定して読む
+# 引数に、dbとユーザidを指定している
+def get_user(db: Session, user_id: int):
+    # db.query(models.PydanticModelName).filter(condition).method()
+    return db.query(models.User).filter(models.User.id == user_id).first()
+
+
+def get_user_by_email(db: Session, email: str):
+    return db.query(models.User).filter(models.User.email == email).first()
+
+
+# 複数のユーザを読む
+# ユーザidの範囲をデフォルト値で指定している
+def get_users(db: Session, skip: int = 0, limit: int = 100):
+    return db.query(models.User).offset(skip).limit(limit).all()
+
+
+def create_user(db: Session, user: schemas.UserCreate):
+    fake_hashed_password = user.password + "notreallyhashed"
+    # SQLAlchemy modelのインスタンスを作成
+    db_user = models.User(email=user.email, hashed_password=fake_hashed_password)
+    db.add(db_user) # db sessionに追加
+    db.commit() # DBに変更を保存
+    db.refresh(db_user) # インスタンスが更新される(IDなどが付与される)
+    return db_user
+
+
+
+def get_items(db: Session, skip: int = 0, limit: int = 100):
+    return db.query(models.Item).offset(skip).limit(limit).all()
+
+
+def create_user_item(db: Session, item: schemas.ItemCreate, user_id: int):
+    # Itemモデルをスマートに記述 + 異なるモデルの属性も注入
+    db_item = models.Item(**item.dict(), owner_id=user_id)
+    db.add(db_item)
+    db.commit()
+    db.refresh(db_item)
+    return db_item
+```
+
+### Main FastAPI app
+
++ これまでに作成したファイルを全て使って統合する
+
+```py
+`sql_app/main.py`
+
+from typing import List
+
+from fastapi import Depends, FastAPI, HTTPException
+from sqlalchemy.orm import Session
+
+from . import crud, models, schemas
+from .database import SessionLocal, engine
+
+
+# DBテーブルを作成
+# 通常はAlembicを使ってDBを初期化する
+# マイグレーションは、SQLAlchemy modelの構造を変更したら、いつでも変更する必要がある
+# 属性の追加、テーブルの追加など
+models.Base.metadata.create_all(bind=engine)
+
+app = FastAPI()
+
+
+# リクエストごとに独立したdb session/connectionが必要
+# 全てのリクエストで同じセッションを使い、終了したら閉じる
+# Dependency
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+# パス操作を行う関数で、dbをSession型のパラメータとして使う
+# 基本的には、crud.pyで作成した関数を呼び出すだけ
+# 不正な操作があったときは、HTTPに関するエラーを返す
+# response_modelでschemas.Hogeを指定する
+# SQLAlchemyではawaitの利用に関する互換性がないため、defを利用する
+@app.post("/users/", response_model=schemas.User)
+def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
+    db_user = crud.get_user_by_email(db, email=user.email)
+    if db_user:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    return crud.create_user(db=db, user=user)
+
+
+# Pydantic modelでorm_modeがTrueなら、List[]で指定することも可能
+@app.get("/users/", response_model=List[schemas.User])
+def read_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    users = crud.get_users(db, skip=skip, limit=limit)
+    return users
+
+
+@app.get("/users/{user_id}", response_model=schemas.User)
+def read_user(user_id: int, db: Session = Depends(get_db)):
+    db_user = crud.get_user(db, user_id=user_id)
+    if db_user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    return db_user
+
+
+@app.post("/users/{user_id}/items/", response_model=schemas.Item)
+def create_item_for_user(
+    user_id: int, item: schemas.ItemCreate, db: Session = Depends(get_db)
+):
+    return crud.create_user_item(db=db, item=item, user_id=user_id)
+
+
+@app.get("/items/", response_model=List[schemas.Item])
+def read_items(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    items = crud.get_items(db, skip=skip, limit=limit)
+    return items
+```
+
+### Migrations
+
++ DBマイグレーションをAlembicで直接実行できる
+  + FastAPIではSQLAlchemyを直接利用しており、他のプラグインを利用していないため
++ SQLAlchemyや他のユーティリティに関する部分を、FastAPIに関連させずに利用することができる
+
 ## Bigger Applications - Multiple Files
 
 + 複数のファイルに分割して、フレキシブルに
