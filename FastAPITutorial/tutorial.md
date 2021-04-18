@@ -2649,6 +2649,137 @@ def read_items(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
 
 + APIRouterを使う
 
+### An example file structure
+
+```md
+.
+├── app                  # "app" is a Python package
+│   ├── __init__.py      # this file makes "app" a "Python package"
+│   ├── main.py          # "main" module, e.g. import app.main
+│   ├── dependencies.py  # "dependencies" module, e.g. import app.dependencies
+│   └── routers          # "routers" is a "Python subpackage"
+│   │   ├── __init__.py  # makes "routers" a "Python subpackage"
+│   │   ├── items.py     # "items" submodule, e.g. import app.routers.items
+│   │   └── users.py     # "users" submodule, e.g. import app.routers.users
+│   └── internal         # "internal" is a "Python subpackage"
+│       ├── __init__.py  # makes "internal" a "Python subpackage"
+│       └── admin.py     # "admin" submodule, e.g. import app.internal.admin
+
+```
+
+### APIRouter
+
++ パス操作に関するコードを切り出す
+
+```py
+`/app/routers/users.py`
+
+# インポート&インスタンスを作成
+from fastapi import APIRouter
+
+router = APIRouter()
+
+
+# パス操作を記述する
+@router.get("/users/", tags=["users"])
+async def read_users():
+    return [{"username": "Rick"}, {"username": "Morty"}]
+
+
+@router.get("/users/me", tags=["users"])
+async def read_user_me():
+    return {"username": "fakecurrentuser"}
+
+
+@router.get("/users/{username}", tags=["users"])
+async def read_user(username: str):
+    return {"username": username}
+
+```
+
+### Another module with APIRouter
+
+```py
+from fastapi import APIRouter, Depends, HTTPException
+
+from ..dependencies import get_token_header
+
+
+# 同じ構造の部分をprefixに記述
+router = APIRouter(
+    prefix="/items",
+    tags=["items"],
+    dependencies=[Depends(get_token_header)],
+    responses={404: {"description": "Not found"}},
+)
+
+fake_items_db = {"plumbus": {"name": "Plumbus"}, "gun": {"name": "Portal Gun"}}
+
+
+# routeの異なる部分のみを記述すればよい
+# /itemsと等価
+@router.get("/")
+async def read_items():
+    return fake_items_db
+
+
+# /items/{item_id}と等価
+@router.get("/{item_id}")
+async def read_item(item_id: str):
+    if item_id not in fake_items_db:
+        raise HTTPException(status_code=404, detail="Item not found")
+    return {"name": fake_items_db[item_id]["name"], "item_id": item_id}
+
+
+@router.put(
+    "/{item_id}",
+    tags=["custom"],
+    responses={403: {"description": "Operation forbidden"}},
+)
+async def update_item(item_id: str):
+    if item_id != "plumbus":
+        raise HTTPException(
+            status_code=403, detail="You can only update the item: plumbus"
+        )
+    return {"item_id": item_id, "name": "The great Plumbus"}
+
+```
+
+### The main FastAPI
+
+```py
+# インポート
+from fastapi import Depends, FastAPI
+
+
+from .dependencies import get_query_token, get_token_header
+
+from .internal import admin
+from .routers import items, users # routerをインポート。名前の衝突を回避するため、直接参照
+
+
+app = FastAPI(dependencies=[Depends(get_query_token)])
+
+
+# サブモジュールのrouterを本体に追加
+# app.include_router(hoges.router)の形式で
+app.include_router(users.router)
+app.include_router(items.router)
+app.include_router(
+    admin.router,
+    prefix="/admin",
+    tags=["admin"],
+    dependencies=[Depends(get_token_header)],
+    responses={418: {"description": "I'm a teapot"}},
+)
+
+
+@app.get("/")
+async def root():
+    return {"message": "Hello Bigger Applications!"}
+
+```
+
 ## Background Tasks
 
 + `BackgroundTasks`を利用する
