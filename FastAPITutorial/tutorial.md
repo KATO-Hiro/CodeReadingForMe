@@ -3109,6 +3109,7 @@ https://github.com/tiangolo/dockerswarm.rocks
   + SQL (Relational) Databasesを参考にする
 
 + エンティティの依存関係は、どのように実現する?
+  + SQLAlchemyなどのORMで定義
 
 + 管理者アカウントは楽に作れる?
 
@@ -3117,9 +3118,12 @@ https://github.com/tiangolo/dockerswarm.rocks
   + Firebase
 
 + Vercelにデプロイできる?
+  + 公式Docでは書かれていない
+  + GitHubだとDBを含まないプロジェクトをリリースした例はある
 
 + CORS対策は?
   + Use CORSMiddlewareを見る
+  + FastAPI-Reactでは、同じポートを使っているため、考慮しなくて良さそう
 
 + mypyによる型チェックに対応している?
   + Yes
@@ -3127,29 +3131,39 @@ https://github.com/tiangolo/dockerswarm.rocks
 + Pydanticとは?
   + モデルの定義を便利にしてくれる
   + バリデーションも行ってくれる?
+    + Yes
 
 + Pytestは使える?
   + Yes
 
 + 標準的なディレクトリ構成は?
   + APIとテストは分離している?
+    + Yes
   + APIについても、機能ごとに分けることは可能?
+    + Yes
 
 + Pythonにおける`async`の使いどころとは?
+  + 重い処理をバックグランドで実行する
 
 + Swagger UIとは?
 + ReDocとは?
 + Swagger UIとReDocの違いは?なぜ2つある?
+  + 単なる好み?
 + OpenAPIのメリットがイマイチ分かっていない
+  + APIのドキュメント作成・連携が楽に
+  + UIからAPIの動作確認からできる=crulコマンドをわざわざ打たなくていい
 + Cookie Parametersの使いどころとは?
 
 + yieldの使い所は?
 
 + MySQLに接続する方法は?
 
-+ pydanticとSQLAlchemyでは、モデルの書き方が違う。
++ PydanticとSQLAlchemyでは、モデルの書き方が違う。
   + 両者の役割の違いはどうなっている?
+    + APIのスキーマを定義
+    + DBのテーブル定義
   + なぜ分けて定義している?
+    + 少なくともSQLAlchemyに関しては、他のORMと差し替えることができるため
 
 ## 感想
 
