@@ -2788,6 +2788,68 @@ async def root():
 
 + メタデータやドキュメントのURLをカスタマイズできる
 
+### Title, description, and version
+
+```py
+from fastapi import FastAPI
+
+# APIのタイトル、説明、バージョンを記述すると、OpenAPIのUIに自動的に反映される
+app = FastAPI(
+    title="My Super Project",
+    description="This is a very fancy project, with auto docs for the API and everything",
+    version="2.5.0", # eg: v2 or 2.5.0
+
+)
+
+
+@app.get("/items/")
+async def read_items():
+    return [{"name": "Foo"}]
+```
+
+### Metadata for tags
+
+```py
+from fastapi import FastAPI
+
+
+# name(必須): タグの名称。パス操作と同じ物を用いる。str
+# description: タグの説明。str
+# externalDocs:
+#   description: 外部ドキュメントの説明。str
+#   url(必須): 外部ドキュメントのURL。str
+# メタデータの記述順に表示される
+tags_metadata = [
+    {
+        "name": "users",
+        "description": "Operations with users. The **login** logic is also here.",
+
+    },
+    {
+        "name": "items",
+        "description": "Manage items. So _fancy_ they have their own docs.",
+        "externalDocs": {
+            "description": "Items external docs",
+            "url": "https://fastapi.tiangolo.com/",
+        },
+    },
+]
+
+# openapi_tagsに、メタデータの情報を渡す
+app = FastAPI(openapi_tags=tags_metadata)
+
+
+@app.get("/users/", tags=["users"])
+async def get_users():
+    return [{"name": "Harry"}, {"name": "Ron"}]
+
+
+@app.get("/items/", tags=["items"])
+async def get_items():
+    return [{"name": "wand"}, {"name": "flying broom"}]
+
+```
+
 ## Static Files
 
 + `StaticFiles`を使う。
