@@ -3165,6 +3165,10 @@ https://github.com/tiangolo/dockerswarm.rocks
   + なぜ分けて定義している?
     + 少なくともSQLAlchemyに関しては、他のORMと差し替えることができるため
 
+## FastAPIが依存しているPydanticで、重要なIssueが出されている?
+
+https://github.com/samuelcolvin/pydantic/issues/2678
+
 ## 感想
 
 + 。
