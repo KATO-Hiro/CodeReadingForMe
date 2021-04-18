@@ -2649,6 +2649,137 @@ def read_items(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
 
 + APIRouterを使う
 
+### An example file structure
+
+```md
+.
+├── app                  # "app" is a Python package
+│   ├── __init__.py      # this file makes "app" a "Python package"
+│   ├── main.py          # "main" module, e.g. import app.main
+│   ├── dependencies.py  # "dependencies" module, e.g. import app.dependencies
+│   └── routers          # "routers" is a "Python subpackage"
+│   │   ├── __init__.py  # makes "routers" a "Python subpackage"
+│   │   ├── items.py     # "items" submodule, e.g. import app.routers.items
+│   │   └── users.py     # "users" submodule, e.g. import app.routers.users
+│   └── internal         # "internal" is a "Python subpackage"
+│       ├── __init__.py  # makes "internal" a "Python subpackage"
+│       └── admin.py     # "admin" submodule, e.g. import app.internal.admin
+
+```
+
+### APIRouter
+
++ パス操作に関するコードを切り出す
+
+```py
+`/app/routers/users.py`
+
+# インポート&インスタンスを作成
+from fastapi import APIRouter
+
+router = APIRouter()
+
+
+# パス操作を記述する
+@router.get("/users/", tags=["users"])
+async def read_users():
+    return [{"username": "Rick"}, {"username": "Morty"}]
+
+
+@router.get("/users/me", tags=["users"])
+async def read_user_me():
+    return {"username": "fakecurrentuser"}
+
+
+@router.get("/users/{username}", tags=["users"])
+async def read_user(username: str):
+    return {"username": username}
+
+```
+
+### Another module with APIRouter
+
+```py
+from fastapi import APIRouter, Depends, HTTPException
+
+from ..dependencies import get_token_header
+
+
+# 同じ構造の部分をprefixに記述
+router = APIRouter(
+    prefix="/items",
+    tags=["items"],
+    dependencies=[Depends(get_token_header)],
+    responses={404: {"description": "Not found"}},
+)
+
+fake_items_db = {"plumbus": {"name": "Plumbus"}, "gun": {"name": "Portal Gun"}}
+
+
+# routeの異なる部分のみを記述すればよい
+# /itemsと等価
+@router.get("/")
+async def read_items():
+    return fake_items_db
+
+
+# /items/{item_id}と等価
+@router.get("/{item_id}")
+async def read_item(item_id: str):
+    if item_id not in fake_items_db:
+        raise HTTPException(status_code=404, detail="Item not found")
+    return {"name": fake_items_db[item_id]["name"], "item_id": item_id}
+
+
+@router.put(
+    "/{item_id}",
+    tags=["custom"],
+    responses={403: {"description": "Operation forbidden"}},
+)
+async def update_item(item_id: str):
+    if item_id != "plumbus":
+        raise HTTPException(
+            status_code=403, detail="You can only update the item: plumbus"
+        )
+    return {"item_id": item_id, "name": "The great Plumbus"}
+
+```
+
+### The main FastAPI
+
+```py
+# インポート
+from fastapi import Depends, FastAPI
+
+
+from .dependencies import get_query_token, get_token_header
+
+from .internal import admin
+from .routers import items, users # routerをインポート。名前の衝突を回避するため、直接参照
+
+
+app = FastAPI(dependencies=[Depends(get_query_token)])
+
+
+# サブモジュールのrouterを本体に追加
+# app.include_router(hoges.router)の形式で
+app.include_router(users.router)
+app.include_router(items.router)
+app.include_router(
+    admin.router,
+    prefix="/admin",
+    tags=["admin"],
+    dependencies=[Depends(get_token_header)],
+    responses={418: {"description": "I'm a teapot"}},
+)
+
+
+@app.get("/")
+async def root():
+    return {"message": "Hello Bigger Applications!"}
+
+```
+
 ## Background Tasks
 
 + `BackgroundTasks`を利用する
@@ -2656,6 +2787,68 @@ def read_items(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
 ## Metadata and Docs URLs
 
 + メタデータやドキュメントのURLをカスタマイズできる
+
+### Title, description, and version
+
+```py
+from fastapi import FastAPI
+
+# APIのタイトル、説明、バージョンを記述すると、OpenAPIのUIに自動的に反映される
+app = FastAPI(
+    title="My Super Project",
+    description="This is a very fancy project, with auto docs for the API and everything",
+    version="2.5.0", # eg: v2 or 2.5.0
+
+)
+
+
+@app.get("/items/")
+async def read_items():
+    return [{"name": "Foo"}]
+```
+
+### Metadata for tags
+
+```py
+from fastapi import FastAPI
+
+
+# name(必須): タグの名称。パス操作と同じ物を用いる。str
+# description: タグの説明。str
+# externalDocs:
+#   description: 外部ドキュメントの説明。str
+#   url(必須): 外部ドキュメントのURL。str
+# メタデータの記述順に表示される
+tags_metadata = [
+    {
+        "name": "users",
+        "description": "Operations with users. The **login** logic is also here.",
+
+    },
+    {
+        "name": "items",
+        "description": "Manage items. So _fancy_ they have their own docs.",
+        "externalDocs": {
+            "description": "Items external docs",
+            "url": "https://fastapi.tiangolo.com/",
+        },
+    },
+]
+
+# openapi_tagsに、メタデータの情報を渡す
+app = FastAPI(openapi_tags=tags_metadata)
+
+
+@app.get("/users/", tags=["users"])
+async def get_users():
+    return [{"name": "Harry"}, {"name": "Ron"}]
+
+
+@app.get("/items/", tags=["items"])
+async def get_items():
+    return [{"name": "wand"}, {"name": "flying broom"}]
+
+```
 
 ## Static Files
 
@@ -2673,6 +2866,200 @@ def read_items(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
   + status code
   + jsonの中身
 
+### Using TestClient
+
+```py
+from fastapi import FastAPI
+
+# インポート
+from fastapi.testclient import TestClient
+
+
+app = FastAPI()
+
+
+@app.get("/")
+async def read_main():
+    return {"msg": "Hello World"}
+
+
+# テスト用のクライアントを作成
+# 以降では、requestと同じように使える
+client = TestClient(app)
+
+
+# test_で始まる名称の関数を作成
+# pytestに準じている
+# Q: async defのケースのテストの仕方は?
+def test_read_main():
+    # テストしたいAPIを叩いて、レスポンスを受け取る
+    response = client.get("/")
+
+    # ステータスコードと内容をチェック
+    # Q: jsonの中身が複雑な場合のチェックはどうするといい?
+    assert response.status_code == 200
+    assert response.json() == {"msg": "Hello World"}
+```
+
+### Separating tests
+
++ appとテストを分離する
+
+```py
+# app
+# main.py
+from fastapi import FastAPI
+
+app = FastAPI()
+
+
+@app.get("/")
+async def read_main():
+    return {"msg": "Hello World"}
+
+
+# テスト
+# test_main.py
+from fastapi.testclient import TestClient
+
+from .main import app
+
+client = TestClient(app)
+
+
+def test_read_main():
+    response = client.get("/")
+    assert response.status_code == 200
+    assert response.json() == {"msg": "Hello World"}
+
+```
+
+### Testing: extended example
+
++ `GET`、`POST`にエラーを返すことができるAPIをテスト
+  + 両方のAPIとも、`X-Token`ヘッダーが必要
+
+```py
+# app
+# main_b.py
+from typing import Optional
+
+from fastapi import FastAPI, Header, HTTPException
+from pydantic import BaseModel
+
+fake_secret_token = "coneofsilence"
+
+fake_db = {
+    "foo": {"id": "foo", "title": "Foo", "description": "There goes my hero"},
+    "bar": {"id": "bar", "title": "Bar", "description": "The bartenders"},
+}
+
+app = FastAPI()
+
+
+class Item(BaseModel):
+    id: str
+    title: str
+    description: Optional[str] = None
+
+
+@app.get("/items/{item_id}", response_model=Item)
+async def read_main(item_id: str, x_token: str = Header(...)):
+    if x_token != fake_secret_token:
+        raise HTTPException(status_code=400, detail="Invalid X-Token header")
+    if item_id not in fake_db:
+        raise HTTPException(status_code=404, detail="Item not found")
+    return fake_db[item_id]
+
+
+@app.post("/items/", response_model=Item)
+async def create_item(item: Item, x_token: str = Header(...)):
+    if x_token != fake_secret_token:
+        raise HTTPException(status_code=400, detail="Invalid X-Token header")
+    if item.id in fake_db:
+        raise HTTPException(status_code=400, detail="Item already exists")
+    fake_db[item.id] = item
+    return item
+
+```
+
++ テストでリクエストに関する方法が分からないときは、`request`を参照する
+
+https://docs.python-requests.org/en/master/
+
+```py
+from fastapi.testclient import TestClient
+
+from .main_b import app
+
+client = TestClient(app)
+
+
+def test_read_item():
+    # ヘッダーをテストするときは、headersパラメータにdict型のデータを入れる。cookiesの場合も同様。
+    response = client.get("/items/foo", headers={"X-Token": "coneofsilence"})
+    assert response.status_code == 200
+    # JSONに変換
+    # TestClientが受け取るデータは、Pydantic modelではないことに注意
+    # Pydantic modelのテストをしたいときは、jsonable_encoderを利用する(See:  JSON Compatible Encoder)
+    assert response.json() == {
+        "id": "foo",
+        "title": "Foo",
+        "description": "There goes my hero",
+    }
+
+
+def test_read_item_bad_token():
+    response = client.get("/items/foo", headers={"X-Token": "hailhydra"})
+    assert response.status_code == 400
+    assert response.json() == {"detail": "Invalid X-Token header"}
+
+
+def test_read_inexistent_item():
+    response = client.get("/items/baz", headers={"X-Token": "coneofsilence"})
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Item not found"}
+
+
+def test_create_item():
+    response = client.post(
+        "/items/",
+        headers={"X-Token": "coneofsilence"},
+        json={"id": "foobar", "title": "Foo Bar", "description": "The Foo Barters"},
+    )
+    assert response.status_code == 200
+    assert response.json() == {
+        "id": "foobar",
+        "title": "Foo Bar",
+        "description": "The Foo Barters",
+    }
+
+
+def test_create_item_bad_token():
+    response = client.post(
+        "/items/",
+        headers={"X-Token": "hailhydra"},
+        json={"id": "bazz", "title": "Bazz", "description": "Drop the bazz"},
+    )
+    assert response.status_code == 400
+    assert response.json() == {"detail": "Invalid X-Token header"}
+
+
+def test_create_existing_item():
+    response = client.post(
+        "/items/",
+        headers={"X-Token": "coneofsilence"},
+        json={
+            "id": "foo",
+            "title": "The Foo ID Stealers",
+            "description": "There goes my stealer",
+        },
+    )
+    assert response.status_code == 400
+    assert response.json() == {"detail": "Item already exists"}
+
+```
+
 ## Debugging
 
 + VSCodeやPyCharmなどで、デバッガを使うことができる
@@ -2684,12 +3071,45 @@ def read_items(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
 
 + FastAPI Project Generatorsで、テンプレートを生成
 
+### Deploy FastAPI on Deta
+
++ Detaで利用可能なDBは、No SQL
+
+### Deploy with Docker
+
++ HTTPSの学習(任意)
++ Docker Swarm mode clusterをセットアップ
+  + HTTPSを自動的に付与
++ appの作成とデプロイ
+
+#### Traefik
+
++ リバースプロキシ、ロードバランサ
++ Let's Encryptの内容を統合
+
++ Q: nginxを使っている場合は、どうすればいい?
+
+#### Docker Swarm mode cluster with Traefik and HTTPS
+
++ 料金体系は、どうなっている?
+  + 月$5は変更されていない?
+  + ネットニュースで、プランが変更されるかも、というアナウンスがあった気がする
+  + AWSやGCPを使った例はある?
+  + 約2年半前の情報のため、最新の情報を確認する必要がある
+
+Article
+https://tiangolo.medium.com/docker-swarm-mode-and-traefik-for-a-https-cluster-20328dba6232
+
+GitHub
+https://github.com/tiangolo/dockerswarm.rocks
+
 ## 疑問点
 
 + CRUDの書き方は?
   + SQL (Relational) Databasesを参考にする
 
 + エンティティの依存関係は、どのように実現する?
+  + SQLAlchemyなどのORMで定義
 
 + 管理者アカウントは楽に作れる?
 
@@ -2698,9 +3118,12 @@ def read_items(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
   + Firebase
 
 + Vercelにデプロイできる?
+  + 公式Docでは書かれていない
+  + GitHubだとDBを含まないプロジェクトをリリースした例はある
 
 + CORS対策は?
   + Use CORSMiddlewareを見る
+  + FastAPI-Reactでは、同じポートを使っているため、考慮しなくて良さそう
 
 + mypyによる型チェックに対応している?
   + Yes
@@ -2708,29 +3131,48 @@ def read_items(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
 + Pydanticとは?
   + モデルの定義を便利にしてくれる
   + バリデーションも行ってくれる?
+    + Yes
 
 + Pytestは使える?
   + Yes
 
 + 標準的なディレクトリ構成は?
   + APIとテストは分離している?
+    + Yes
   + APIについても、機能ごとに分けることは可能?
+    + Yes
 
 + Pythonにおける`async`の使いどころとは?
+  + 重い処理をバックグランドで実行する
 
 + Swagger UIとは?
 + ReDocとは?
 + Swagger UIとReDocの違いは?なぜ2つある?
+  + 単なる好み?
 + OpenAPIのメリットがイマイチ分かっていない
+  + APIのドキュメント作成・連携が楽に
+  + UIからAPIの動作確認からできる=crulコマンドをわざわざ打たなくていい
 + Cookie Parametersの使いどころとは?
 
 + yieldの使い所は?
 
 + MySQLに接続する方法は?
 
-+ pydanticとSQLAlchemyでは、モデルの書き方が違う。
++ PydanticとSQLAlchemyでは、モデルの書き方が違う。
   + 両者の役割の違いはどうなっている?
+    + APIのスキーマを定義
+    + DBのテーブル定義
   + なぜ分けて定義している?
+    + 少なくともSQLAlchemyに関しては、他のORMと差し替えることができるため
+
++ 非同期処理を行うORMはある?
+  + デファクトスタンダードは?
+
+https://fastapi.tiangolo.com/async/#in-a-hurry
+
+## FastAPIが依存しているPydanticで、重要なIssueが出されている?
+
+https://github.com/samuelcolvin/pydantic/issues/2678
 
 ## 感想
 
@@ -2751,3 +3193,5 @@ def read_items(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
 + 。
 
 ## See
+
+https://fastapi.tiangolo.com/
