@@ -2866,6 +2866,200 @@ async def get_items():
   + status code
   + jsonの中身
 
+### Using TestClient
+
+```py
+from fastapi import FastAPI
+
+# インポート
+from fastapi.testclient import TestClient
+
+
+app = FastAPI()
+
+
+@app.get("/")
+async def read_main():
+    return {"msg": "Hello World"}
+
+
+# テスト用のクライアントを作成
+# 以降では、requestと同じように使える
+client = TestClient(app)
+
+
+# test_で始まる名称の関数を作成
+# pytestに準じている
+# Q: async defのケースのテストの仕方は?
+def test_read_main():
+    # テストしたいAPIを叩いて、レスポンスを受け取る
+    response = client.get("/")
+
+    # ステータスコードと内容をチェック
+    # Q: jsonの中身が複雑な場合のチェックはどうするといい?
+    assert response.status_code == 200
+    assert response.json() == {"msg": "Hello World"}
+```
+
+### Separating tests
+
++ appとテストを分離する
+
+```py
+# app
+# main.py
+from fastapi import FastAPI
+
+app = FastAPI()
+
+
+@app.get("/")
+async def read_main():
+    return {"msg": "Hello World"}
+
+
+# テスト
+# test_main.py
+from fastapi.testclient import TestClient
+
+from .main import app
+
+client = TestClient(app)
+
+
+def test_read_main():
+    response = client.get("/")
+    assert response.status_code == 200
+    assert response.json() == {"msg": "Hello World"}
+
+```
+
+### Testing: extended example
+
++ `GET`、`POST`にエラーを返すことができるAPIをテスト
+  + 両方のAPIとも、`X-Token`ヘッダーが必要
+
+```py
+# app
+# main_b.py
+from typing import Optional
+
+from fastapi import FastAPI, Header, HTTPException
+from pydantic import BaseModel
+
+fake_secret_token = "coneofsilence"
+
+fake_db = {
+    "foo": {"id": "foo", "title": "Foo", "description": "There goes my hero"},
+    "bar": {"id": "bar", "title": "Bar", "description": "The bartenders"},
+}
+
+app = FastAPI()
+
+
+class Item(BaseModel):
+    id: str
+    title: str
+    description: Optional[str] = None
+
+
+@app.get("/items/{item_id}", response_model=Item)
+async def read_main(item_id: str, x_token: str = Header(...)):
+    if x_token != fake_secret_token:
+        raise HTTPException(status_code=400, detail="Invalid X-Token header")
+    if item_id not in fake_db:
+        raise HTTPException(status_code=404, detail="Item not found")
+    return fake_db[item_id]
+
+
+@app.post("/items/", response_model=Item)
+async def create_item(item: Item, x_token: str = Header(...)):
+    if x_token != fake_secret_token:
+        raise HTTPException(status_code=400, detail="Invalid X-Token header")
+    if item.id in fake_db:
+        raise HTTPException(status_code=400, detail="Item already exists")
+    fake_db[item.id] = item
+    return item
+
+```
+
++ テストでリクエストに関する方法が分からないときは、`request`を参照する
+
+https://docs.python-requests.org/en/master/
+
+```py
+from fastapi.testclient import TestClient
+
+from .main_b import app
+
+client = TestClient(app)
+
+
+def test_read_item():
+    # ヘッダーをテストするときは、headersパラメータにdict型のデータを入れる。cookiesの場合も同様。
+    response = client.get("/items/foo", headers={"X-Token": "coneofsilence"})
+    assert response.status_code == 200
+    # JSONに変換
+    # TestClientが受け取るデータは、Pydantic modelではないことに注意
+    # Pydantic modelのテストをしたいときは、jsonable_encoderを利用する(See:  JSON Compatible Encoder)
+    assert response.json() == {
+        "id": "foo",
+        "title": "Foo",
+        "description": "There goes my hero",
+    }
+
+
+def test_read_item_bad_token():
+    response = client.get("/items/foo", headers={"X-Token": "hailhydra"})
+    assert response.status_code == 400
+    assert response.json() == {"detail": "Invalid X-Token header"}
+
+
+def test_read_inexistent_item():
+    response = client.get("/items/baz", headers={"X-Token": "coneofsilence"})
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Item not found"}
+
+
+def test_create_item():
+    response = client.post(
+        "/items/",
+        headers={"X-Token": "coneofsilence"},
+        json={"id": "foobar", "title": "Foo Bar", "description": "The Foo Barters"},
+    )
+    assert response.status_code == 200
+    assert response.json() == {
+        "id": "foobar",
+        "title": "Foo Bar",
+        "description": "The Foo Barters",
+    }
+
+
+def test_create_item_bad_token():
+    response = client.post(
+        "/items/",
+        headers={"X-Token": "hailhydra"},
+        json={"id": "bazz", "title": "Bazz", "description": "Drop the bazz"},
+    )
+    assert response.status_code == 400
+    assert response.json() == {"detail": "Invalid X-Token header"}
+
+
+def test_create_existing_item():
+    response = client.post(
+        "/items/",
+        headers={"X-Token": "coneofsilence"},
+        json={
+            "id": "foo",
+            "title": "The Foo ID Stealers",
+            "description": "There goes my stealer",
+        },
+    )
+    assert response.status_code == 400
+    assert response.json() == {"detail": "Item already exists"}
+
+```
+
 ## Debugging
 
 + VSCodeやPyCharmなどで、デバッガを使うことができる
