@@ -3071,6 +3071,38 @@ def test_create_existing_item():
 
 + FastAPI Project Generatorsで、テンプレートを生成
 
+### Deploy FastAPI on Deta
+
++ Detaで利用可能なDBは、No SQL
+
+### Deploy with Docker
+
++ HTTPSの学習(任意)
++ Docker Swarm mode clusterをセットアップ
+  + HTTPSを自動的に付与
++ appの作成とデプロイ
+
+#### Traefik
+
++ リバースプロキシ、ロードバランサ
++ Let's Encryptの内容を統合
+
++ Q: nginxを使っている場合は、どうすればいい?
+
+#### Docker Swarm mode cluster with Traefik and HTTPS
+
++ 料金体系は、どうなっている?
+  + 月$5は変更されていない?
+  + ネットニュースで、プランが変更されるかも、というアナウンスがあった気がする
+  + AWSやGCPを使った例はある?
+  + 約2年半前の情報のため、最新の情報を確認する必要がある
+
+Article
+https://tiangolo.medium.com/docker-swarm-mode-and-traefik-for-a-https-cluster-20328dba6232
+
+GitHub
+https://github.com/tiangolo/dockerswarm.rocks
+
 ## 疑問点
 
 + CRUDの書き方は?
