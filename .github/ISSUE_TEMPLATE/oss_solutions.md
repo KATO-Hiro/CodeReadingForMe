@@ -38,7 +38,7 @@ about: 著名なOSSから問題発見・解決方法を学ぶためのテンプ�
 - TODO: write here
 - TODO: write here
 
-## 改善の余地
+## 改善の余地があると思われる点
 
 - TODO: write here
 - TODO: write here
