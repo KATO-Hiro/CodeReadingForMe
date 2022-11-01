@@ -1878,6 +1878,149 @@ use crate::module_a;
 use super::super::module_a;
 ```
 
+### Cargo - ビルドシステム・パッケージマネージャ
+
++ Cargo
+  + ビルドシステムとパッケージマネージャの役割を持つ
+  + ソースコードをビルドするときに、ライブラリの依存関係を解決し、必要なライブラリをDLして、コンパイル
+  + 配布用のパッケージを作成するときも使う
+
++ サブコマンド
+  + プロジェクトの開始、ビルド、実行、テストなどのサブコマンドを持っている
+  + よく使うものから順に
+
++ cargo new
+  + 外部クレートを使用する場合は、Cargo.tomlの[dependencies]の下に記述
+  + サンプルのソースコードでは、`Hello, world!`を出力する実装になっている
+
+```terminal
+cargo new [OPTIONS] <path>
+
+- Cargo.toml // パッケージの情報
+- .git
+- .gitignore
+- src
+  - main.rs
+```
+
++ cargo init
+  + cargo newとほぼ同じ
+  + 違い: すでに存在するディレクトリに対してRustの構成ファイルを追加できる
+
+```terminal
+cargo init [OPTIONS] <path>
+```
+
++ cargo build
+  + ソースコードをビルド
+  + 全ての外部クレートの依存関係を解決して、必要なクレートをダウンロードをした上でビルドを行う
+  + オプションを指定しないとdevプロファイルでビルドされる
+    + デバッグしやすいように最適化されていない状態でコンパイルされる
+  + オプションでreleaseを指定すると、releaseプロファイルでビルド
+  + ビルドの最中で出来上がる成果物は、targetディレクトリ内に保存される
+    + target/debug or target/releaseに
+  + ビルドは並列のジョブで実行される。デフォルトはCPUの数。
+    + -j N or --jobs N (N: 数値)オプションを付与
+
+```terminal
+cargo build [OPTIONS]
+```
+
++ cargo check
+  + パッケージと全てのクレートに対して、コードのエラーチェックを行う
+  + buildコマンドと異なり、バイナリファイルを生成しないので、エラーチェックのときに使用
+
+```terminal
+cargo check [OPTIONS]
+```
+
++ cargo run
+  + パッケージ内のバイナリファイルを実行
+  + ビルドが必要な場合は、ビルドを行ってからバイナリファイルを実行
+  + buildコマンドと同様にデフォルトではdevプロファイルでビルド
+  + バイナリファイルを引数つきで実行したい場合は、2つのダッシュ(--)の後に渡したい引数を追加
+
+```terminal
+cargo run [OPTIONS] [-- ARGS]
+```
+
++ cargo test
+  + パッケージに含まれているテストコードを実行
+  + テスト用バイナリファイルは、#[test]アトリビュートがついた全ての関数を複数のスレッドで実施
+  + TESTNAMEをつけることで、特定のテストケースのみ実行できる
+
+```terminal
+cargo test [OPTIONS] [TESTNAME] [-- TEST-OPTIONS]
+```
+
++ cargo fix
+  + ソースコードにある不備や改善点を発見し、警告の中で修正可能なものを自動的に修正
+
++ cargo clean
+  + ビルドで作られた生成物を削除
+  + デフォルト: targetディレクトリごと全て削除
+    + --release: releaseプロファイルの生成物のみ削除
+    + -p SPEC or --package SPEC: SPECの生成物のみ削除
+    + --doc: ドキュメント関連のみ削除
+
+```terminal
+cargo clean [OPTIONS]
+```
+
++ cargo doc
+  + パッケージに含まれているソースコードと全ての依存関係にあるクレートのドキュメントを作成
+    + target/docディレクトリに作成される
+    + --open: ドキュメント作成完了後に自動でブラウザを開いてくれる
+    + --no-dpes: 依存関係にあるライブラリのドキュメントを作成したくない場 合
+    + --document-private-items: 非公開の要素も含めてドキュメント化
+  + cargo publish: 開発したクレートがcrates.ioに公開される。ドキュメントに関しては、Docs.rsに公開される。
+
+```terminal
+cargo doc [OPTIONS]
+```
+
++ cargo install
+  + デフォルトはcrates.ioからパッケージをDL
+    + --git、--path、--registryでダウンロード元を変更できる
+  + インストール先のdir: ~/.cargo
+    + --root DIRオプションで変更できる
+    + 環境変数CARGO_INSTALL_ROOT.Cargo.toml内のinstall.root、環境変数CARGO_HOMEにパスを指定している場合は、変数でしたパスにインストールされる
+
+```terminal
+cargo install [OPTIONS] [CRATE]
+```
+
++ cargo uninstall
+  + cargo installでインストールしたバイナリファイルをアンインストールする
+  + 削除対象を--root DIRオプションで指定できる
+
+```terminal
+cargo uninstall [OPTIONS] [SPEC]
+```
+
++ cargo search
+  + crates.ioで公開されているクレートを検索できる
+  + 検索したいキーワードともに実行すれば、Cargo.tomlに直接コピペできるフォーマットで得られる
+
+```terminal
+cargo serach [OPTIONS] [QUERY]
+```
+
++ cargo publish
+  + ソースコードのパッケージを.cratesファイルに圧縮し、クレートをcrates.ioにアップロードして、世界に公開する
+  + Cargo.tomlの情報をもとにcrates.ioの説明文やDocs.rsのリンクが追加される
+    + authors
+    + license or license-file
+    + description
+    + homepage
+    + documentation
+    + repository
+    + readme
+  + --dry-runオプションで、アップロードはせずに、全てのチェックができる
+
++ Cargo.toml
+  + TOMLフォーマットで書かれたパッケージの設定ファイル(パッケージのマニフェストとも)
+
 ## 疑問点
 
 + 所有権が難しいらしいが・・・。
