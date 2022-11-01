@@ -2020,6 +2020,22 @@ cargo serach [OPTIONS] [QUERY]
 
 + Cargo.toml
   + TOMLフォーマットで書かれたパッケージの設定ファイル(パッケージのマニフェストとも)
+  + セクションごとに分かれている
+    + パッケージ情報、依存クレート、コンパイラの設定などを記述できる
+  + packageセクション
+    + パッケージ自体の情報を記述できる
+    + cargo newコマンドでパッケージディレクトリを作ると、name、version、author、editionなどが記載されている
+  + ターゲットセクション
+    + 指定したターゲットによって作られるバイナリファイルのビルド方法を設定できる
+      + lib, bin, example, test, benchセクション
+      + libは[]、それ以外は[[]]で記述
+  + dependenciesセクション
+    + 外部クレートを利用するために必要
+
+```toml
+[dependencies]
+serde_json = "x.x.x"
+```
 
 ## 疑問点
 
