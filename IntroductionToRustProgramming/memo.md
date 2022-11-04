@@ -2085,6 +2085,28 @@ fn test_add() {
 }
 ```
 
++ assertマクロ
+  + assert!()
+  + assert_eq!()
+  + assert_ne!()
+
+```rust
+#[test]
+fn assert_sample() {
+    assert!(true);
+    
+    // 第一引数がfalseのときに、パニックを起こす
+    // Q: panic = 例外と思えばよい?
+    assert!(false, "panic! values={}", false);
+    
+    // 2つの値を比較して、値が等しい/異なることを期待するマクロ
+    assert_eq!(true, true);
+    assert_ne!(true, false);
+    
+    assert_eq!(true, false, "panic value=({}, {})", true, false);
+}
+```
+
 ## 疑問点
 
 + 所有権が難しいらしいが・・・。
