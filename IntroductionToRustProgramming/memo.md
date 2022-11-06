@@ -2107,6 +2107,31 @@ fn assert_sample() {
 }
 ```
 
++ パニックを発生させるテスト
+  + あえて、パニックを発生させるテストを実施できる
+
+```rust
+// should_panic属性を追加
+#[test]
+#[should_panic]
+fn test_panic() {
+    panic!("expected panic");
+``
+
++ 普段はignoreするテスト
+  + 実行に時間がかかる
+  + 特定の環境や条件が揃っている必要がある など
++ cargo test --ignoredで実行できる
+  + testでできあがったテスト用のバイナリファイルは、--ignoredを与えると、#[ignore] attribute付きのテストコードを実行するようにコンパイルされている
+
+```rust
+#[test]
+#[ignore]
+fn test_add_ignored() {
+    assert_eq!(-2, add(-1, -1));
+}
+```
+
 ## 疑問点
 
 + 所有権が難しいらしいが・・・。
