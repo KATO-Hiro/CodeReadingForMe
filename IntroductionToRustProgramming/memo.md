@@ -2123,12 +2123,91 @@ fn test_panic() {
   + 特定の環境や条件が揃っている必要がある など
 + cargo test --ignoredで実行できる
   + testでできあがったテスト用のバイナリファイルは、--ignoredを与えると、#[ignore] attribute付きのテストコードを実行するようにコンパイルされている
+  + cargo testやcargo runは、引数に--を与えると、それ以降の引数をバイナリファイルの実行に利用する引数として扱うようになる
 
 ```rust
 #[test]
 #[ignore]
 fn test_add_ignored() {
     assert_eq!(-2, add(-1, -1));
+}
+```
+
++ テストモジュール
+  + cargo new --libで新しいプロジェクトフォルダを作成すると、以下のテストコードが自動で作成される 
+  + #[cfg(test)]アトリビュートを指定したtestsモジュールは、cargo testの実行したときだけ、そのコードをコンパイルし、実行ファイルにバイナリファイルを含めるようになる。#[test]で指定したテストコードも同様
+  + 利点: テストコードでしか使わないヘルパー関数をモジュールに踏めることができるため、通常のcargo buildしたバイナリファイルに不要なコードが入らないようにできる。同様に、testsモジュールの中で外部のモジュールをuseすると、テストのときだけインポートされるので、本番のバイナリファイルに不要なコードを入れずに済む。
+
+```rust
+#[cfg(test)]
+mod tests {
+  #[test]
+  fn it_works() {
+    assert_eq!(2 + 2, 4);
+  }
+}
+```
+
+```rust
+fn add(a: i32, b: i32) -> i32 {
+  a + b
+}
+
+#[cfg(test)]
+mod tests {
+  // 親ディレクトリに含まれる構造体や関数を全て読み込むイディオム
+  // 正規表現のワイルドカードのような書き方をしているように見える
+  use super::*;
+
+  #[test]
+  fn it_works() {
+    assert_eq!(add(2, 2), 4);
+  }
+}
+```
+
++ testsディレクトリ
+  + ユニットテスト: 機能のコードとテストコードを同一ファイルに書くことで、privateな関数もテストできる
+  + 結合テスト: 複数のモジュールにまたがる場合にtestsディレクトリを使う
+    + 別のクレートという位置付け
+    + srcディレクトリで実装したクレートを外部クレートとして使用し、そのテストを実施できる
+      + publicな関数のみテストで使用できる
+
+```rust
+// test_code/src/lib.rs
+
+pub fn add(x: i32, y: i32) -> i32 {
+  return x + y;
+}
+
+// tests/lib.rs
+// testsから見ると、test_codeは外部クレートになるため、useで読み込む
+use test_code::add;
+
+#[test]
+fn integration_test() {
+  assert_eq!(3, add(1, 2));
+}
+```
+
++ ドキュメントのテスト
+  + cargo testを実行すると、通常のテストコード + 「Doc-tests」も実行される
+  + ドキュメントに含まれるコードを検証するためのもの
+  + 使い方のコードに問題がないかをコンパイルして、実行してくれる
+    + 自動でmain() {}が追加されるため、問題なくコンパイルできる
+
+```rust
+/// This function adds 2 numbers.
+///
+/// # Example
+///
+/// ...
+/// use test_code::add;
+///
+/// add(1, 2);
+/// ...
+pub fn add(x: i32, y: i32) -> i32 {
+  return x + y;
 }
 ```
 
