@@ -15,6 +15,12 @@
 + 新しいプロジェクトを最小限の機能でリリースする。
 
 + 分かっていることと、分かっていないことを区別する。
+  + 分かっていること
+    + ほぼ書き方を忘れた可能性が高い。
+  + 分かっていないこと
+    + Next.jsを導入するメリット・デメリット。特に、App Router。
+    + React。関数型の書き方が主流だと思われるが・・・。
+    + TypeScript: 見よう見まね or コンパイラのエラーに従って直しているだけ。
 
 + 機能の実装に必要な部分を重点的に学習する。
 
@@ -114,6 +120,18 @@ Tailwind CSS
 $ pnpm dev
 ```
 
+## プロジェクトの構成
+
++ トップレベルのファイルやフォルダ、設定ファイル、appディレクトリやpagesディレクトリ内のルーティング規約
+
+> https://nextjs.org/docs/getting-started/project-structure
+
+## React Essentials
+
++ Reactの新機能であるServer Componentsを使いこなす必要がある
++ Server ComponentsとClient Componentsの違い、使うタイミング、おすすめのパターンについて説明
++ Reactを初めて使う場合、React Docsを参照。
+
 ## 疑問点
 
 + npmとnpxの違いは?
@@ -166,6 +184,7 @@ $ npx package-name
 
 + ストリーミングとは?
 
++ Prettierは使わないようになった?別のツールが主流になっている?
 
 ## 感想
 
