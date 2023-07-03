@@ -52,11 +52,33 @@ export default function MyApp() {
     return (
         <div>
             <h1>Welcome to my app</h1>
+            // <ComonentName />で利用できる。HTMLタグのように2回書かなくても良さそう。
             <MyButton />
         </div>
     )
 }
 ```
+
+## Writing markup with JSX 
+
++ 上記のマークアップ構文はJSXと呼ばれる。
++ JSX
+  + HTMLより厳格
+  + <br />のようにタグを閉じる必要がある
+  + コンポーネントは複数のJSXタグを返すことはできない
+  + <>...</>ラッパーでラップする必要がある
+
+```jsx
+function Aboutpage() {
+  return (
+    <>
+      <h1>About</h1>
+      <p>Hello there.<br />How do you do?</p>
+    </>
+  )
+}
+```
+
 
 ## 疑問点
 
