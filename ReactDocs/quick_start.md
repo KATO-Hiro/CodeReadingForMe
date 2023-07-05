@@ -72,6 +72,7 @@ export default function MyApp() {
 function Aboutpage() {
   return (
     <>
+      // 以下にマークアップ
       <h1>About</h1>
       <p>Hello there.<br />How do you do?</p>
     </>
@@ -79,6 +80,76 @@ function Aboutpage() {
 }
 ```
 
+## Adding styles 
+
++ CSSクラスclassName = HTMLのclass属性と同じ
+
+```jsx
+// classNameと「N」が大文字になっている
+<img className="avatar" />
+```
+
++ CSSの内容は、別ファイルに記述できる
++ Reactでは、CSSファイルの追加方法を規定していない。HTMLに<link>タグを追加するか、ビルドツールやFWのドキュメントを参照。
+
+```css
+.avatar {
+  boarder-radius: 50%;
+}
+```
+
+## Displaying data
+
++ JavaScriptにマークアップを入れることができる。中括弧を使うと、JavaScriptに「エスケープバック」して、コードから変数を埋め込み、ユーザーに表示することができる
+
+```jsx
+return (
+  <h1>
+    // {hogehoge}の形式で、hogehogeに変数を埋め込む
+    {user.name}
+  </h1>
+);
+```
+
++ JSX属性から「JavaScriptにエスケープ」することもできるが、引用符の代わりに中括弧を使わなければならない。例えば、className="avatar "はCSSクラスとして "avatar "文字列を渡すが、src={user.imageUrl}はJavaScriptのuser.imageUrl変数値を読み込み、その値をsrc属性として渡す。
+
+```jsx
+return (
+  // Q: 複数の要素があっても、改行で区別している?
+  // hogeFugaのような形式で記述している
+  <imge 
+    className="avatar"
+    src={user.imageUrl}
+  />
+);
+```
+
++ style={{}}は特別な構文ではなく、style={ } JSX中括弧内の通常の{}オブジェクト。style属性は、スタイルがJavaScript変数に依存する場合に使用できる。
+
+```jsx
+const user = {
+  name: 'Hedy Lamarr !',
+  imageUrl: 'https://i.imgur.com/yXOvdOSs.jpg',
+  imageSize: 90,
+};
+
+export default function Profile() {
+  return (
+    <>
+      <h1>{user.name}</h1>
+      <img
+        className="avatar"
+        src={user.imageUrl}
+        alt={'Photo of ' + user.name}
+        style={{
+          width: user.imageSize,
+          height: user.imageSize
+        }}
+      />
+    </>
+  );
+}
+```
 
 ## 疑問点
 
