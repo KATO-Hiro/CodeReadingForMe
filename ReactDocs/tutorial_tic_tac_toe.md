@@ -47,6 +47,23 @@
   + 勝敗の判定
     + 縦・横・斜めの3マスがどれか1種類の印なら、その印をマークした手番の勝利
 
+## Setup for the tutorial
+
++ CodeSandboxでは、ブラウザ上でコードを書いたり、作成したアプリがユーザーにどのように表示されるかをプレビューすることができる。
++ ローカル環境を用意して、実行することもできる。
+
+```js
+// App.js
+
+// 思っていた以上に少ないコードで正方形が描画されている
+// 正方形 + 印
+// CSSのsquareクラスで属性が指定されている
+export default function Square() {
+  // HTMLとは違いclassnameではなく、classNameになっている
+  return <button className="square">X</button>;
+}
+```
+
 ## 項目
 
 ## 疑問点
