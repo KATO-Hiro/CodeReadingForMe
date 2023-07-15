@@ -10,9 +10,9 @@
 
 ## 目標
 
-+ 。
++ チュートリアルを完走して、Reactの基本を理解できるようにする。
 
-+ 。
++ これから作るAppに関連が強い部分を重点的に学ぶ。
 
 ## 技術選定の理由
 
@@ -58,17 +58,77 @@
 // 思っていた以上に少ないコードで正方形が描画されている
 // 正方形 + 印
 // CSSのsquareクラスで属性が指定されている
+// JavaScriptのexportキーワード: 関数を関数が定義されたファイルの外からアクセスできるようにする
+// defaultキーワード: 他のファイルに、関数が書かれているファイルのメイン関数であることを知らせる
 export default function Square() {
+  // property or propで、CSSボタンのスタイルを指定
   // HTMLとは違いclassnameではなく、classNameになっている
   return <button className="square">X</button>;
 }
 ```
 
+## Overview
+
++ App.js
+  + コンポーネントを作成
+    + Reactでは、コンポーネントはユーザーインターフェースの一部を表す再利用可能なコードの一部
+    + アプリケーションのUI要素をレンダリング、管理、更新するために使用される
++ styles.css
+  + App.jsファイルのコンポーネントのスタイルを定義
++ index.js
+  + チュートリアル中にこのファイルを編集することはないが、App.jsファイルで作成したコンポーネントとウェブ・ブラウザーの橋渡しをする
+  + 以下のコードには、必要な要素が揃っている
+    + React
+    + ウェブブラウザと対話するためのReactのライブラリ（React DOM）
+    + コンポーネントのスタイル
+    + App.jsで作成したコンポーネント
+
+```js
+// index.js
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+import './styles.css';
+
+import App from './App';
+```
+
++ ファイルの残りの部分は、すべての内容をまとめ、最終的な成果物をpublicフォルダーのindex.htmlに注入
+
+### Building the board
+
++ 以降では、App.jsのみ扱う。
+
++ 現在、ボードは1マスしかありませんが、9マス必要です！コピー＆ペーストで2つの正方形を作る
+  + シンタックスエラーの原因: Reactコンポーネントは、2つのボタンのように隣接する複数のJSX要素ではなく、単一のJSX要素を返す必要があります。
+  + 解決方法: フラグメント（<>と</>）を使用して、隣接する複数のJSX要素をこのようにラップ
+
+```jsx
+export default function Square() {
+  return (
+    <>
+      <button className="square">X</button>
+      <button className="square">X</button>
+    </>
+  );
+}
+```
+
++ ボードを9マス用意
+  + JSX elementをコピー
+  + グリッドにするため、divでマスをグループ化 + CSSを追加
+
++ コンポーネント名をSquareからBoardへ
+  + 内容に即した名前をつける
+  + 大文字 + 小文字
+
+### Passing data through props 
+
 ## 項目
 
 ## 疑問点
 
-+ 。
++ React DOMとは?
+  + DOMそのものをあまり理解できていないかも?
 
 + 。
 
