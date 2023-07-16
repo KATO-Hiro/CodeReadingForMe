@@ -121,7 +121,102 @@ export default function Square() {
   + 内容に即した名前をつける
   + 大文字 + 小文字
 
-### Passing data through props 
+### Passing data through props
+
++ ユーザーがマスをクリックしたときに、マスの値を空から "X "に変更
++ 9マスのコードをコピペで作ったが、Reactのコンポーネントアーキテクチャを使えば、再利用可能なコンポーネントを作成できるので、重複を回避できる
+
++ // コードを書きながら、リファクタリング
+
+```jsx
+// 子コンポーネントの定義
+// propsを使って、親コンポーネントから子コンポーネントに値を渡す
+// { hoge }の形式で記述
+function Square({ value }) {
+  // JavaScriptのコードをエスケープする場合は{}を使う
+  return <button className="square">{value}</button>;
+}
+
+// 親コンポーネントから子コンポーネントの呼び出し
+<ConponentName attr="" />
+```
+
+### Making an interactive component 
+
++ SquareコンポーネントをクリックしたらXで塗りつぶす
+
++ Squareの内部にhandleClickという関数を宣言する
++ そして、Squareから返されたボタンJSX要素のpropsにonClickを追加する
+
+```jsx
+function Square({ value }) {
+  // 動作させたい内容を定義
+  function handleClick() {
+    console.log('clicked!');
+  }
+
+  return (
+    <button
+      className="square"
+      // 関数名のみ{}でラップして呼び出し
+      onClick={handleClick}
+    >
+      {value}
+    </button>
+  );
+}
+```
+
++ Squareコンポーネントがクリックされたことを「記憶」し、「X」マークで塗りつぶす
+  + useStateを使い、コンポーネントから呼び出すことで実現できる
+  + クリック時に変更するように
+
+```jsx
+// useStateをインポート
+// Pythonとimport, fromの順番が逆になっている
+// Q: import { useState }としているのはなせ?
+import { useState } from 'react';
+
+function Square() {
+  // const [hoo, setHoo] = useState(initial_value);の形式で
+  const [value, setValue] = useState(null);
+
+  function handleClick() {
+    //...
+
+```
+
+```jsx
+function Square() {
+  const [value, setValue] = useState(null);
+
+  function handleClick() {
+    // クリックしたときの動作を定義
+    // Q: 関数として扱っているように見えるが・・・
+    setValue('X');
+  }
+
+  return (
+    <button
+      className="square"
+      onClick={handleClick}
+    >
+      {value}
+    </button>
+  );
+}
+```
+
++ 各Squareはそれぞれ独自の状態を持つ。各Squareに格納された値は、他のSquareから完全に独立している。コンポーネントでset関数を呼び出すと、Reactは自動的に内部の子コンポーネントも更新する。
+
++ 抽象化
+  + イベント(動作させたい要素)を該当するコンポーネントで定義
+    + 関数とhandleActionName()
+    + JSX要素のpropsに渡す
+    + 値を記憶させたいときは、useStateをimportして、初期値とイベントに応じて更新する方法を記述
+
+### React Developer Tools
+
 
 ## 項目
 
