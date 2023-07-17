@@ -217,6 +217,14 @@ function Square() {
 
 ### React Developer Tools
 
++ React DevToolsを使うと、Reactコンポーネントのpropsや状態を確認できる
+
+## Completing the game
+
++ ここまでで、三目並べゲームの基本的な構成要素はすべて揃ったことに
++ 盤上に「X」と「O」を交互に配置して、勝者を決める
+
+### Lifting state up
 
 ## 項目
 
