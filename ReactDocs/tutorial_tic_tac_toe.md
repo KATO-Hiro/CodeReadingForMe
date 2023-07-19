@@ -226,6 +226,152 @@ function Square() {
 
 ### Lifting state up
 
++ 各Squareコンポーネントはゲームの状態の一部を保持している。三目並べゲームの勝敗をチェックするためには、ボードは9つのSquareコンポーネントの状態を知る必要がある。
+  + ゲームの状態を各Squareに保存するのではなく、親となるBoardコンポーネントに保存するのが最良の方法
+  + propを渡すことで何を表示するかを各Squareに伝えることができる
+
++ Reactコンポーネントをリファクタリングする際、状態を親コンポーネントにリフティングすることはよくある
+
+```jsx
+// ...
+export default function Board() {
+  // 9つの要素を持つ配列を作成し、それぞれにnullを設定
+  // useState()を呼び出すと、squaresステート変数が宣言され、その配列に初期値が設定される
+  const [squares, setSquares] = useState(Array(9).fill(null));
+  return (
+    // ...
+  );
+}
+
+
+// Boardコンポーネント全体
+export default function Board() {
+  const [squares, setSquares] = useState(Array(9).fill(null));
+  return (
+    <>
+      <div className="board-row">
+        <Square value={squares[0]} />
+        <Square value={squares[1]} />
+        <Square value={squares[2]} />
+      </div>
+      <div className="board-row">
+        <Square value={squares[3]} />
+        <Square value={squares[4]} />
+        <Square value={squares[5]} />
+      </div>
+      <div className="board-row">
+        <Square value={squares[6]} />
+        <Square value={squares[7]} />
+        <Square value={squares[8]} />
+      </div>
+    </>
+  );
+}
+```
+
++ 子コンポーネントを親コンポーネントにリフトアップすることで盤面全体の状態を管理
+
+
+// 以降から、急激に難易度が上がったような印象がある。
+
++ それぞれの正方形は、'X'、'O'、または空の正方形の場合はnullのいずれかの値プロップを受け取ります。
+
++ 次に、正方形がクリックされたときの処理を変更します。Board コンポーネントは、どのマスが塗りつぶされるかを管理します。正方形がボードの状態を更新する方法を作る必要があります。状態は、それを定義するコンポーネントのプライベートなので、Square から直接 Board の状態を更新することはできません。
+
++ その代わりに、Board コンポーネントから Square コンポーネントに関数を渡して、正方形がクリックされたときに Square がその関数を呼び出すようにします。まず、Square コンポーネントがクリックされたときに呼び出す関数から始めます。その関数をonSquareClickと呼びます：
+
+```jsx
+// 呼び出し先
+// onSquareClickを追加
+function Square({ value, onSquareClick }) {
+  return (
+    <button className="square" onClick={onSquareClick}>
+      {value}
+    </button>
+  );
+}
+
+// 呼び出し元
+export default function Board() {
+  const [squares, setSquares] = useState(Array(9).fill(null));
+
+  // イベントを定義
+  function handleClick(i) {
+    // 配列のコピーを作成
+    const nextSquares = squares.slice();
+    nextSquares[i] = "X";
+    // setSquares関数を呼び出すことで、Reactはコンポーネントの状態が変更されたことを知ることができる。
+    // JavaScript: クロージャをサポート。内側の関数が外側の変数・関数にアクセスできる
+    setSquares(nextSquares);
+  }
+
+  return (
+    <>
+      <div className="board-row">
+        // propsにonSquareClickを追加
+        <Square value={squares[0]} onSquareClick={handleClick} />
+        //...
+  );
+}
+
+
+```
+
++ 上位のコンポーネントで状態を管理しておき、下位のコンポーネントでアクションに応じて状態を更新
+  + イベントを上位から下位のコンポーネントに渡す
+  + 子コンポーネントでイベントが発生したら、上位のコンポーネントの状態を更新するように要求
+
+```jsx
+// Not working
+// 無限ループ。Board全体の再レンダリングとhandleClick(0)を繰り返す
+// 関数が呼び出されている
+<Square value={squares[0]} onSquareClick={handleClick(0)} />
+
+
+// handleClick(i)を呼び出す関数をアロー関数で記述するとシンプルに書ける
+export default function Board() {
+  // ...
+  return (
+    <>
+      <div className="board-row">
+        // 四角がクリックされると、=>以降のコードが実行される
+        <Square value={squares[0]} onSquareClick={() => handleClick(0)} />
+        // ...
+  );
+}
+```
+
++ ユーザーがボードの左上のマスをクリックし、そこにXを追加するときに何が起こるかを復習してみましょう：
+
++ 左上の正方形をクリックすると、ボタンがSquareからonClickプロップとして受け取った関数が実行されます。SquareコンポーネントはBoardからonSquareClickプロップとしてその関数を受け取りました。Boardコンポーネントはその関数をJSXで直接定義しました。この関数は、引数0を指定してhandleClickを呼び出します。
++ handleClickは、引数(0)を使って、squares配列の最初の要素をnullからXに更新します。
++ Boardコンポーネントのsquaresの状態が更新されたので、Boardとそのすべての子が再レンダリングされます。これにより、インデックス0を持つSquareコンポーネントのvalue propがnullからXに変更されます。
++ 最終的に、ユーザは左上の正方形をクリックした後、空からXに変わったことを確認します。
+
++ Reactでは、イベントを表すプロップにはonSomethingという名前を使い、それらのイベントを処理する関数定義にはhandleSomethingを使うのが一般的です。
+
+### Why immutability is important
+
++ handleClickでは、既存の配列を変更する代わりに、.slice()を呼び出して四角形の配列のコピーを作成していることに注目
+  + 不変性の説明
++ データを変更するには、一般的に2つのアプローチがある。第一のアプローチは、データの値を直接変更することによってデータを変異させることである。もう1つは、希望する変更を加えた新しいコピーでデータを置き換える方法です。
++ 結果は同じだが、変異（基礎となるデータの変更）を直接行わないことで、いくつかの利点
+  + 複雑な機能の実装をより簡単に
+    + 例: 以前のバージョンのデータをそのまま保持し、後で再利用
+  + コンポーネントが自分のデータが変更されたかどうかを比較するのが非常に簡単に
+    + デフォルトでは、親コンポーネントの状態が変更されると、すべての子コンポーネントが自動的に再レンダリングされます。これには、変更の影響を受けていない子コンポーネントも含まれます。
+    + 再レンダリングは、それ自体はユーザーにとって目立つものではありませんが（積極的に避けようとしてはいけません！）、パフォーマンス上の理由から、明らかに影響を受けていないツリーの一部の再レンダリングをスキップしたい場合があります。
+
+### Taking turns 
+
++ 初手はデフォルトで "X "に設定する。Boardコンポーネントにもう一つ状態を追加することで、これを記録
+  + xIsNextを状態として持つ。初期値は、true
+  + BoardコンポーネントのhandleClick()で、xIsNextがtrue/falseで場合分け
+    + setXIsNext()で状態を更新
++ 同じマスをクリックすると、マスの値が反転してしまう
+  + チュートリアルでは、状態を更新を許可しない方針で
+  + handleClickで、squares[i]が既に更新されていたら、状態を変更しないようにする = returnを使う
+
 ## 項目
 
 ## 疑問点
