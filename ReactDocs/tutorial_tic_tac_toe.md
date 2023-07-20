@@ -534,7 +534,7 @@ export default function Game() {
 
 + この時点で、ステートはGameコンポーネント内に移動し、UIはリファクタリング前と同じように完全に動作するはずです。この時点でのコードは以下のようになります：
 
-### 抽象化
+#### 抽象化
 
 + ある機能を追加するときの考え方
   + コンポーネント(空枠)を定義 + 現在のコンポーネントとの階層関係を確認
@@ -542,6 +542,215 @@ export default function Game() {
   + イベントを扱う関数のみを定義
   + コンポーネント間で必要なデータ・関数を渡す
   + コンポーネントやイベントを扱う関数の中身を実装
+
+### Showing the past moves
+
++ あなたは三目並べゲームの履歴を記録しているので、プレイヤーに過去の手のリストを表示することができます。
+
++ <button>のようなReact要素は、通常のJavaScriptオブジェクトです。Reactで複数のアイテムをレンダリングするには、React要素の配列を使います。
+
++ すでにステートには履歴の移動の配列があるので、それをReact要素の配列に変換する必要があります。JavaScriptでは、配列を別の配列に変換するには、配列マップメソッドを使用します：
+
+```js
+// array.map((変換前の個別のvalue) => 変換後のvalue)
+[1, 2, 3].map((x) => x * 2) // [2, 4, 6]
+```
+
++ mapを使って、手の履歴を画面上のボタンを表すReact要素に変換し、過去の手に「ジャンプ」するためのボタンのリストを表示する。Gameコンポーネントで履歴をマッピングしてみよう：
+
+```jsx
+export default function Game() {
+  const [xIsNext, setXIsNext] = useState(true);
+  const [history, setHistory] = useState([Array(9).fill(null)]);
+  const currentSquares = history[history.length - 1];
+
+  function handlePlay(nextSquares) {
+    setHistory([...history, nextSquares]);
+    setXIsNext(!xIsNext);
+  }
+
+  // 追加
+  function jumpTo(nextMove) {
+    // TODO
+  }
+
+  // 追加
+  const moves = history.map((squares, move) => {
+    let description;
+    if (move > 0) {
+      description = 'Go to move #' + move;
+    } else {
+      description = 'Go to game start';
+    }
+    return (
+      <li>
+        <button onClick={() => jumpTo(move)}>{description}</button>
+      </li>
+    );
+  });
+
+  return (
+    <div className="game">
+      <div className="game-board">
+        <Board xIsNext={xIsNext} squares={currentSquares} onPlay={handlePlay} />
+      </div>
+      <div className="game-info">
+        // 更新
+        <ol>{moves}</ol>
+      </div>
+    </div>
+  );
+}
+```
+
++ コードは以下のようになります。開発者ツールのコンソールに、次のようなエラーが表示されるはずです：警告：Warning: 配列またはイテレータの各子要素は、一意の "key" prop を持つ必要があります。Game`のrenderメソッドをチェックしてください。このエラーは次のセクションで修正します。
+
+### Picking a key
+
++ リストをレンダリングすると、Reactはレンダリングされた各リスト項目に関する情報を保存します。リストを更新するとき、Reactは何が変更されたかを判断する必要があります。リストの項目を追加したり、削除したり、並べ替えたり、更新したりすることができます。
+
+```jsx
+// from
+<li>Alexa: 7 tasks left</li>
+<li>Ben: 5 tasks left</li>
+
+// to
+<li>Ben: 9 tasks left</li>
+<li>Claudia: 8 tasks left</li>
+<li>Alexa: 5 tasks left</li>
+```
+
++ 更新されたカウントに加えて、これを読んだ人間はおそらく、AlexaとBenの順序を入れ替え、AlexaとBenの間にClaudiaを挿入したと言うだろう。しかし、Reactはコンピュータ・プログラムであり、あなたが何を意図したかを知ることはできません。そのため、各リスト項目を兄弟から区別するために、各リスト項目にキープロパティを指定する必要があります。もしデータがデータベースからのものであれば、Alexa、Ben、ClaudiaのデータベースIDをキーとして使うことができる。
+
+```jsx
+<li key={user.id}>
+  {user.name}: {user.taskCount} tasks left
+</li>
+```
+
++ リストが再レンダリングされると、Reactは各リスト項目のキーを受け取り、一致するキーがないか前のリストの項目を検索する。現在のリストに以前存在しなかったキーがある場合、Reactはコンポーネントを作成します。現在のリストに、前のリストに存在したキーがない場合、Reactは前のコンポーネントを破棄する。2つのキーが一致した場合、対応するコンポーネントが移動される。
+
++ キーは、Reactに各コンポーネントの識別情報を伝え、Reactが再レンダリングの間に状態を維持できるようにする。コンポーネントのキーが変更されると、コンポーネントは破棄され、新しい状態で再作成される。
+ 
++ キーは、Reactで予約された特別なプロパティです。要素が作成されると、Reactはkeyプロパティを抽出し、返された要素に直接keyを格納します。keyがpropsとして渡されているように見えても、Reactは自動的にkeyを使って更新するコンポーネントを決定する。コンポーネントが、その親が指定したキーが何であるかを尋ねる方法はない。
+ 
++ 動的なリストを作成するときは常に、適切なキーを割り当てることを強くお勧めします。適切なキーがない場合は、そうなるようにデータの再構築を検討するとよいでしょう。
+ 
++ キーが指定されていない場合、React はエラーを報告し、デフォルトで配列のインデックスをキーとして使用します。配列のインデックスをキーとして使用するのは、リストの項目を並べ替えたり、挿入したり削除したりするときに問題があります。明示的にkey={i}を渡すとエラーはなくなりますが、配列インデックスと同じ問題があるため、ほとんどの場合は推奨されません。
+ 
++ キーはグローバルに一意である必要はなく、構成要素とその兄弟間で一意であればよいのです。
+
+### Implementing time travel
+
++ 三目並べゲームの履歴では、過去の各手には一意のIDが関連付けられている。手の順番が入れ替わったり、削除されたり、途中で挿入されたりすることはないので、手のインデックスをキーとして使っても安全である。
+
+Game関数の中で、<li key={move}>としてキーを追加すれば、レンダリングされたゲームをリロードすれば、Reactの "key "エラーは消えるはずです：
+ 
+```jsx
+const moves = history.map((squares, move) => {
+  //...
+  return (
+    // 追加
+    <li key={move}>
+      <button onClick={() => jumpTo(move)}>{description}</button>
+    </li>
+  );
+});
+```
+
++ jumpToを実装する前に、ユーザーが現在どのステップを表示しているかをGameコンポーネントが追跡する必要があります。これを行うには、currentMoveという新しいステート変数を定義する（デフォルトは0）：
+
+```jsx
+export default function Game() {
+  const [xIsNext, setXIsNext] = useState(true);
+  const [history, setHistory] = useState([Array(9).fill(null)]);
+  // 追加
+  const [currentMove, setCurrentMove] = useState(0);
+  const currentSquares = history[history.length - 1];
+  //...
+}
+```
+
++ 次に、Game内のjumpTo関数を更新して、currentMoveを更新する。また、currentMoveを変更する数値が偶数であれば、xIsNextをtrueに設定する。
+
+```jsx
+export default function Game() {
+  // ...
+  function jumpTo(nextMove) {
+    setCurrentMove(nextMove);
+    setXIsNext(nextMove % 2 === 0);
+  }
+  //...
+}
+```
+
++ ここでは、マスをクリックしたときに呼び出されるGameのhandlePlay関数に2つの変更を加えます。
+
++ 時間をさかのぼり」、その時点から新しい手を打つ場合、その時点までの履歴だけを残したい。nextSquaresをhistory.slice(0, currentMove + 1)の全アイテムの後に追加するのではなく、history.slice(0, currentMove + 1)の全アイテムの後に追加することで、古い履歴のその部分のみを保持するようにします。
+
++ 移動が行われるたびに、currentMoveを更新して最新の履歴エントリーを指すようにする必要がある。
+
+```jsx
+function handlePlay(nextSquares) {
+  // 修正
+  const nextHistory = [...history.slice(0, currentMove + 1), nextSquares];
+  setHistory(nextHistory);
+  setCurrentMove(nextHistory.length - 1);
+  setXIsNext(!xIsNext);
+}
+```
+
++ 最後に、常に最終手をレンダリングするのではなく、現在選択されている手をレンダリングするようにGameコンポーネントを修正します：
+
+```jsx
+export default function Game() {
+  const [xIsNext, setXIsNext] = useState(true);
+  const [history, setHistory] = useState([Array(9).fill(null)]);
+  const [currentMove, setCurrentMove] = useState(0);
+  // 修正
+  const currentSquares = history[currentMove];
+
+  // ...
+}
+```
+
+### Final cleanup
+
++ コードをよく見ると、currentMoveが偶数のときはxIsNext==true、currentMoveが奇数のときはxIsNext==falseであることに気づくかもしれない。つまり、currentMoveの値がわかっていれば、xIsNextがどうあるべきかはいつでもわかる。
+
++ この両方をステートに保存する理由はない。実際、常に冗長なステートは避けるようにしよう。ステートに格納するものを単純化することで、バグを減らし、コードを理解しやすくすることができる。Gameを変更し、xIsNextを別のステート変数として保存せず、代わりにcurrentMoveに基づいて計算するようにする：
+
+```jsx
+export default function Game() {
+  const [history, setHistory] = useState([Array(9).fill(null)]);
+  const [currentMove, setCurrentMove] = useState(0);
+  const xIsNext = currentMove % 2 === 0;
+  const currentSquares = history[currentMove];
+
+  function handlePlay(nextSquares) {
+    const nextHistory = [...history.slice(0, currentMove + 1), nextSquares];
+    setHistory(nextHistory);
+    setCurrentMove(nextHistory.length - 1);
+  }
+
+  function jumpTo(nextMove) {
+    setCurrentMove(nextMove);
+  }
+  // ...
+}
+```
+
++ xIsNextの状態宣言やsetXIsNextの呼び出しが不要になった。これで、コンポーネントのコーディング中に間違えても、xIsNextがcurrentMoveと同期しなくなることはない。
+
+### Wrapping up
+
++ 時間が余ったときや、新しいReactのスキルを練習したいときに、三目並べゲームに加えることができる改良のアイデアを、難易度の高い順にいくつか挙げてみましょう：
+
++ 現在の手番のみ、ボタンの代わりに「現在手番...」と表示する。
++ 碁盤をハードコーディングする代わりに、2つのループを使ってマスを作るように書き換える。
++ 手を昇順または降順に並べ替えるトグルボタンを追加する。
++ 誰かが勝ったら、その勝因となった3つのマスをハイライトする(誰も勝てなかったときは、引き分けというメッセージを表示する)。
++ 着手履歴リストに、各手の場所を(row, col)の形式で表示する。
 
 ## 項目
 
@@ -554,7 +763,8 @@ export default function Game() {
 
 ## 感想
 
-+ 。
++ 写経してなんとなく分かったつもりになっているが，最初から何も見ずに実装しろと言われると厳しいかも。
+  + 履歴を保持するパートから急激に難しくなったように感じる。
 
 + 。
 
