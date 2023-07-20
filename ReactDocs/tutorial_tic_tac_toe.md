@@ -382,6 +382,167 @@ export default function Board() {
 
 + ゲームの終了をプレイヤーに知らせるために、「勝者」のようなテキストを表示することができます：X "や "Winner：O".そのためには、ボードコンポーネントにステータスセクションを追加します。ステータスは、ゲームが終わっていれば勝者を表示し、ゲームが進行中であれば、次の手番を表示します：
 
+## Adding time travel
+
++ 最後の練習として、ゲームの前の手に「過去に戻る」ことを可能にしてみよう。
+
+### Storing a history of moves
+
++ 正方形の配列を変更していれば、タイムトラベルを実現するのは非常に難しくなる。
+
++ しかし、あなたはslice()を使って、一手ごとに新しい正方形配列のコピーを作成し、それを不変のものとして扱った。これにより、過去のすべてのバージョンの正方形配列を保存し、すでに起こったターンの間を移動することができる。
+
++ 過去のsquares配列は、historyという別の配列に格納し、それを新しいステート変数として格納する。history配列は、最初の手から最後の手までのすべての碁盤の状態を表し、次のような形をしています：
+
+```js
+[
+  // Before first move
+  [null, null, null, null, null, null, null, null, null],
+  // After first move
+  [null, null, null, null, 'X', null, null, null, null],
+  // After second move
+  [null, null, null, null, 'X', null, null, null, 'O'],
+  // ...
+]
+```
+
+### Lifting state up, again
+
++ 過去の手のリストを表示するために、Gameという新しいトップレベルコンポーネントを書きます。そこに、ゲーム全体の履歴を含む履歴ステートを配置します。
+
++ 履歴の状態をGameコンポーネントに置くことで、その子コンポーネントであるBoardコンポーネントから四角形の状態を取り除くことができます。ちょうど、SquareコンポーネントからBoardコンポーネントに "状態を持ち上げた "ように、今度は、BoardコンポーネントからトップレベルのGameコンポーネントに "状態を持ち上げる "のです。これにより、Game コンポーネントは、碁盤のデータを完全にコントロールできるようになり、履歴から前のターンをレンダリングするように碁盤に指示できるようになります。
+
++ まず、Gameコンポーネントをexport defaultで追加する。Board コンポーネントとマークアップをレンダリングさせます：
+
+```jsx
+function Board() {
+  // ...
+}
+
+export default function Game() {
+  return (
+    <div className="game">
+      <div className="game-board">
+        <Board />
+      </div>
+      <div className="game-info">
+        <ol>{/*TODO*/}</ol>
+      </div>
+    </div>
+  );
+}
+```
+
++ function Board() {宣言の前のexport defaultキーワードを削除し、function Game() {宣言の前に追加していることに注意してください。これにより、index.js ファイルは、Board コンポーネントの代わりに Game コンポーネントをトップレベルのコンポーネントとして使用するようになります。Game コンポーネントによって返される追加の div は、後でボードに追加するゲーム情報のためのスペースを作っています。
+
++ Game コンポーネントに状態を追加して、どのプレーヤーが次なのか、手の履歴を追跡します：
+
+```jsx
+export default function Game() {
+  const [xIsNext, setXIsNext] = useState(true);
+  // Array(9).fill(null)]が1つの項目を持つ配列であり、それ自体が9つのnullの配列であることに注目してほしい。
+  const [history, setHistory] = useState([Array(9).fill(null)]);
+  // ...
+```
+
++ 現在の手のマスをレンダリングするには、ヒストリーから最後のマスの配列を読み込みます。このためにuseStateは必要ありません。レンダリング中に計算するのに十分な情報をすでに持っているからです：
+
+```jsx
+export default function Game() {
+  const [xIsNext, setXIsNext] = useState(true);
+  const [history, setHistory] = useState([Array(9).fill(null)]);
+  // 0-indexedと思えば良い?
+  const currentSquares = history[history.length - 1];
+```
+
++ 次に、ゲームを更新するためにボードコンポーネントによって呼び出されるGameコンポーネント内にhandlePlay関数を作成します。xIsNext、currentSquares、handlePlayを小道具としてBoardコンポーネントに渡します：
+
+```jsx
+export default function Game() {
+  // Boardコンポーネントから引き上げ
+  const [xIsNext, setXIsNext] = useState(true);
+  const [history, setHistory] = useState([Array(9).fill(null)]);
+  const currentSquares = history[history.length - 1];
+
+  function handlePlay(nextSquares) {
+    // TODO
+  }
+
+  return (
+    <div className="game">
+      <div className="game-board">
+        // 状態や関数を子コンポーネントに渡す
+        <Board xIsNext={xIsNext} squares={currentSquares} onPlay={handlePlay} />
+        //...
+  )
+}
+```
+
++ Boardコンポーネントが受け取る小道具によって完全に制御されるようにしましょう。xIsNext、squares、そしてBoardがプレイヤーが手を打ったときに更新されたsquares配列で呼び出す新しいonPlay関数です。次に、useStateを呼び出しているBoard関数の最初の2行を削除する：
+
+```jsx
+function Board({ xIsNext, squares, onPlay }) {
+  function handleClick(i) {
+    //...
+  }
+  // ...
+}
+```
+
++ ここで、Board コンポーネントの handleClick の setSquares と setXIsNext 呼び出しを、新しい onPlay 関数の呼び出しに置き換えて、ユーザーがマスをクリックしたときに Game コンポーネントが Board を更新できるようにします：
+
+```jsx
+function Board({ xIsNext, squares, onPlay }) {
+  function handleClick(i) {
+    if (calculateWinner(squares) || squares[i]) {
+      return;
+    }
+    const nextSquares = squares.slice();
+    if (xIsNext) {
+      nextSquares[i] = "X";
+    } else {
+      nextSquares[i] = "O";
+    }
+
+    // 追加
+    onPlay(nextSquares);
+  }
+  //...
+}
+```
+
++ Board コンポーネントは Game コンポーネントから渡される props によって完全に制御されます。ゲームを再び動かすには、GameコンポーネントにhandlePlay関数を実装する必要があります。
+
++ handlePlayが呼ばれたら何をすればいいのでしょうか？Boardは以前、更新された配列でsetSquaresを呼び出していたことを思い出してください。
+
++ handlePlay関数はGameの状態を更新して再レンダリングをトリガーする必要がありますが、setSquares関数はもう呼び出すことができません。更新されたsquares配列を新しいヒストリエントリとして追加することで、ヒストリを更新することになります。また、Boardが行っていたように、xIsNextをトグルすることもできます：
+
+```jsx
+export default function Game() {
+  //...
+  function handlePlay(nextSquares) {
+    setHistory([...history, nextSquares]);
+    setXIsNext(!xIsNext);
+  }
+  //...
+}
+```
+
++ ここで、[...history, nextSquares]は、historyのすべての項目とnextSquaresを含む新しい配列を作成します。(...history]の構文は、"historyのすべての項目を列挙する "と読むことができる）。
+
++ 例えば、historyが [[null,null,null], ["X",null,null]] で、nextSquaresが ["X",null, "O"] の場合、新しい [...history, nextSquares] 配列は [[null,null,null], ["X",null,null], ["X",null, "O"]] となります。
+
++ この時点で、ステートはGameコンポーネント内に移動し、UIはリファクタリング前と同じように完全に動作するはずです。この時点でのコードは以下のようになります：
+
+### 抽象化
+
++ ある機能を追加するときの考え方
+  + コンポーネント(空枠)を定義 + 現在のコンポーネントとの階層関係を確認
+  + 必要な状態を列挙し、useStateで初期値をセット
+  + イベントを扱う関数のみを定義
+  + コンポーネント間で必要なデータ・関数を渡す
+  + コンポーネントやイベントを扱う関数の中身を実装
+
 ## 項目
 
 ## 疑問点
