@@ -120,14 +120,143 @@ export default function App() {
 
 ### Writing markup with JSX
 
-+ JSXはHTMLによく似ていますが、少し厳格で、動的な情報を表示できる
++ JSXはHTMLによく似ているが、少し厳格で、動的な情報を表示できる
 + 既存のHTMLマークアップをReactコンポーネントに貼り付けても、常に機能するとは限らない
 
 + HTMLからJSXに変換するツールもある
 
+#### JSX: Putting markup into JavaScript
+
++ これまで: コンテンツ(HTML、CSS)とロジック(JavaScript)が別々
++ Webがインタラクティブにになるにつれ、ロジックがコンテンツを決定することが多くなった
+  + JavaScriptがHTMLを担当するようになった
+  + Reactでは、レンダリングロジックとマークアップが同じ場所（コンポーネント）に同居
+  + メリット: 関連のあるコンポーネントのロジックとマークアップを一緒にしておくことで、編集のたびに両者の同期が保たれる。直接関連のないコンポーネント同士は分離されている。
++ Note: JSXとReactは別物
+  + JSX: シンタックスの拡張
+  + React: JSライブラリ
+
+#### The Rules of JSX
+
+1. 単独のroot elementを返す。複数の要素で構成される場合は、parent tagでラップ
+2. 全てのタグを閉じる
+3. キャメルケース(cameCase)
+
++ JSXはJSになり、JSXで書かれた属性はJSオブジェクトのキーになる
+  + JSの変数名の宣言に制限がある(ex: 変数名にダッシュやclassのような予約語は利用できない)
+    + stroke-widthをstrokeWidthのように書き換え
+    + classをclassName
+    + 例外: aria-*属性とdata-*属性は歴史的な経緯からHTMLと同じ
++ 間違ったとしても、browserのコンソールに修正メッセージが表示される
+
+```jsx
+// 省略記法。Fragmentと呼ばれる。
+// 理由: 内部的にはプレーンなJavaScriptオブジェクトに変換されている。関数から2つ(以上?)のオブジェクトを返すには、それらを配列にラップする必要がある。
+<>
+  // markup
+  // <img>ではなく、<img />
+  <img
+    src="..."
+    alt="Foo"
+    className="photo"
+  />
+  <ul>
+    <li>Foo</li>
+  </ul>
+</>
+```
+
 ### JavaScript in JSX with curly braces (中括弧)
 
 + JavaScriptのロジックを追加、動的なプロパティを参照したい場合、JSXで中括弧を使用する
+
++ {}の内容は、関数呼び出しの内部を含めで、どんなところでも有効
+
++ JSX内部での利用方法
+  + JSXタグの内部にテキストとして直接記述
+  + 属性
+
+```jsx
+// OK
+<h1>{name} 's TO DO List</h1>
+// NG
+<{tag}>Foo 's TO DO List</{tag}>
+
+
+// OK
+src={avatar}
+// NG: 文字列として渡される
+src="{avatar}"
+
+// NG: 中括弧は以下のように連続して記述できない
+src={A}{B}{C}
+// OK: 文字列の場合は連結(or ヘルバー関数でURLを生成)してから中括弧で囲む
+src={A + B + C}
+```
+
+#### Using “double curlies”: CSS and other objects in JSX
+
++ 元々{}を含む内容は、{{}}のように
+
+```jsx
+// 例: CSSの属性指定
+// Note: 内部では、キャメルケース(camelCase)で記述
+<ul style={{
+  backgroundColor: 'black'
+  color: 'pink'
+}}>
+</ul>
+```
+
+#### More fun with JavaScript objects and curly braces
+
+```jsx
+// 一つのオブジェクトから参照
+// 定義
+// 階層構造も可能
+const person = {
+  name: 'Gregorio Y. Zara',
+  theme: {
+    backgroundColor: 'black',
+    color: 'pink'
+  }
+};
+
+// 参照
+// object.attributeの形式で
+export default function TodoList() {
+  return (
+    <div style={person.theme}>
+      <h1>{person.name}'s Todos</h1>
+      <img
+        className="avatar"
+        src="https://i.imgur.com/7vQD0fPs.jpg"
+        alt="Gregorio Y. Zara"
+      />
+      <ul>
+        <li>Improve the videophone</li>
+        <li>Prepare aeronautics lectures</li>
+        <li>Work on the alcohol-fuelled engine</li>
+      </ul>
+    </div>
+  );
+}
+
+// ヘルバー関数の参照と利用
+export function getImageUrl(person) {
+  return (
+
+  );
+}
+
+// 参照
+...
+<img 
+  ...
+  src={getImageUrl(person)}
+/>
+...
+```
 
 ### Passing props to a component
 
