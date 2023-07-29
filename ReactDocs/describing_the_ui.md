@@ -262,6 +262,181 @@ export function getImageUrl(person) {
 
 + propsはオブジェクト、配列、関数、さらにはJSXなど、あらゆるJavaScriptの値を渡すことができる
 
+```jsx
+// 親コンポーネントから要素を渡す
+export default function Profile() {
+  return (
+    <Avatar
+      person={{ name: 'Lin Lanying', imageId: '1bX5QH6' }}
+      size={100}
+    />
+  );
+}
+
+// 子コンポーネントで受け取り
+// {}で受け取る要素を囲む
+function Avatar({ person, size }) {
+  // person and size are available here
+}
+
+
+// propsオブジェクトとして受け取り
+// 必要な要素のみ、props.fooの形式で取り出している
+function Avatar(props) {
+  let person = props.person;
+  let size = props.size;
+  // ...
+}
+```
+
+#### Specifying a default value for a prop
+
+```jsx
+// デフォルト値を指定できる
+function Avatar({ person, size = 100 }) {
+  // ...
+}
+
+
+// 呼び出し元
+// ...を指定することで、sizeには100がセットされる
+<Avatar person={...} />
+```
+
+#### Forwarding props with the JSX spread syntax
+
+```jsx
+// 冗長な記述
+function Profile({ person, size, isSepia, thickBorder }) {
+  return (
+    <div className="card">
+      <Avatar
+        person={person}
+        size={size}
+        isSepia={isSepia}
+        thickBorder={thickBorder}
+      />
+    </div>
+  );
+}
+
+
+// 該当コンポーネントがpropsを直接使用しない場合、より簡潔な "spread "構文を使用
+// ...propsを書くだけ
+function Profile(props) {
+  return (
+    <div className="card">
+      <Avatar {...props} />
+    </div>
+  );
+}
+```
+
+#### Passing JSX as children
+
++ コンポーネントをネストした状態にしたいときには、children propを使う
+  + 任意のJSXで親コンポーネントによって「埋められる」「穴」を持っていると考えられる
+  + 例: パネル、グリッドなどのビジュアルラッパーによく使われる
+
+```jsx
+<Card>
+  <Avatar />
+</Card>
+
+
+// 呼び出し先
+// children propとして受け取る + 子要素が何を描画しているか知る必要はない
+function Card({ children }) {
+  return (
+    <div className="card">
+      {children}
+    </div>
+  );
+}
+```
+
+#### How props change over time
+
+```jsx
+// コンポーネントが時間とともに異なる値を受け取る可能性がある
+// propはimmutable(変更不可能)であるため、変更しないように。変更する場合は、状態を設定する必要がある
+// 親コンポーネントのコードは、ステートを使用しているため省略
+export default function Clock({ color, time }) {
+  return (
+    <h1 style={{ color: "blue" }}>
+      {time}
+    </h1>
+  );
+}
+```
+
+```jsx
+import { getImageUrl } from './utils.js';
+
+function Profile(props) {
+  const name = props.name;
+  const imageUrl = props.imageUrl;
+  const profession = props.profession;
+  const awardsCount = props.awardsCount;
+  const awards = props.awards;
+  const discovered = props.discovered;
+
+  return (
+    <>
+      <section className="profile">
+        <h2>{name}</h2>
+        <img
+          className="avatar"
+          src={getImageUrl(imageUrl)}
+          alt={name}
+          width={70}
+          height={70}
+        />
+        <ul>
+          <li>
+            <b>Profession: </b> 
+            {profession}
+          </li>
+          <li>
+            <b>Awards: {awardsCount} </b> 
+            {awards}
+          </li>
+          <li>
+            <b>Discovered: </b>
+            {discovered}
+          </li>
+        </ul>
+      </section>
+    </>
+  )
+}
+
+export default function Gallery() {
+  return (
+    <div>
+      <h1>Notable Scientists</h1>
+      <Profile
+        name = "Maria Skłodowska-Curie"
+        imageUrl = "szV5sdG"
+        profession = "physicist and chemist"
+        awardsCount = "4"
+        awards = "(Nobel Prize in Physics, Nobel Prize in Chemistry, Davy Medal, Matteucci Medal)"
+        discovered = "polonium (element)"
+      />
+      <Profile
+        name = "Katsuko Saruhashi"
+        imageUrl = "YfeOqp2"
+        profession = "geochemist"
+        awardsCount = "2"
+        awards = "(Miyake Prize for geochemistry, Tanaka Prize)"
+        discovered = "a method for measuring carbon dioxide in seawater"
+      />
+    </div>
+  );
+}
+
+```
+
 ### Conditional rendering
 
 + 異なる条件によって異なるものを表示するときは、if文、&&、? : 演算子などのJavaScript構文を使用
