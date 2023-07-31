@@ -441,10 +441,177 @@ export default function Gallery() {
 
 + 異なる条件によって異なるものを表示するときは、if文、&&、? : 演算子などのJavaScript構文を使用
 
+```jsx
+// 条件で異なるコンポーネントを表示
+// if / elseステートメント
+function Item({ name, isPacked }) {
+  if (isPacked) {
+    return <li className="item">{name} ✔</li>;
+  }
+  return <li className="item">{name}</li>;
+}
+
+export default function PackingList() {
+  return (
+    <section>
+      <h1>Sally Ride's Packing List</h1>
+      <ul>
+        <Item 
+          isPacked={true} 
+          name="Space suit" 
+        />
+        <Item 
+          isPacked={true} 
+          name="Helmet with a golden leaf" 
+        />
+        <Item 
+          isPacked={false} 
+          name="Photo of Tam" 
+        />
+      </ul>
+    </section>
+  );
+}
+
+
+// 三項演算子を使って、違う部分だけ書き換え
+// 条件 ? true : false
+// Note: JSX要素は内部の状態を保持せず、実際のDOMノードでもないため、インスタンスではない
+return (
+  <li className="item">
+    {isPacked ? name + ' ✔' : name}
+  </li>
+)
+
+// 別のHTML tagでラップすることもできる
+// Note: 条件が多い場合は、子コンポーネントに抽出することを検討
+function Item({ name, isPacked }) {
+  return (
+    <li className="item">
+      {isPacked ? (
+        <del>
+          {name + ' ✔'}
+        </del>
+      ) : (
+        name
+      )}
+    </li>
+  );
+}
+
+
+// &&演算子
+// cond && hogeで、cond = trueのときにhogeを表示
+// {}は別に用意する必要がある
+// Note: &&の左側に数字を書くと、数字が描画されるので注意
+return (
+  <li className="item">
+    {name} {isPacked && '✔'}
+  </li>
+);
+
+
+// 変数を宣言して使う
+function Item({ name, isPacked }) {
+  let itemContent = name;
+
+  // 条件を満たす場合のみ変更
+  if (isPacked) {
+    itemContent = name + " ✔";
+  }
+  return (
+    <li className="item">
+      {itemContent}
+    </li>
+  );
+}
+```
+
 ### Rendering lists
 
 + データの集合から、複数の類似したコンポーネントを表示
   + JavaScriptのfilter()やmap()を使う
+
+#### Rendering data from arrays 
+
++ インタフェースを構築する際には、異なるデータを使って同じコンポーネントの複数のインスタンスを表示する必要があることがよくあります
++ このような状況では、JavaScriptのオブジェクトや配列にデータを格納し、map()やfilter()のようなメソッドを使用して、そこからコンポーネントのリストをレンダリングすることができます
+
+```html
+<ul>
+  <li>Creola Katherine Johnson: mathematician</li>
+  <li>Mario José Molina-Pasquel Henríquez: chemist</li>
+  <li>Mohammad Abdus Salam: physicist</li>
+  <li>Percy Lavon Julian: chemist</li>
+  <li>Subrahmanyan Chandrasekhar: astrophysicist</li>
+</ul>
+```
+
+1. 配列にデータを移動させる
+2. 要素をJSXノードの配列として追加
+3. コンポーネントに追加
+
+```jsx
+// step1
+const people = [
+  'Creola Katherine Johnson: mathematician',
+  'Mario José Molina-Pasquel Henríquez: chemist',
+  'Mohammad Abdus Salam: physicist',
+  'Percy Lavon Julian: chemist',
+  'Subrahmanyan Chandrasekhar: astrophysicist'
+];
+
+// step2
+// 一つずつ取り出して処理
+const listItems = people.map(person => <li>{person}</li>)
+
+// step3
+return <ul>{listItems}<ul>;
+```
+
+#### Filtering arrays of items 
+
+```jsx
+import { people } from './data.js';
+import { getImageUrl } from './utils.js';
+
+export default function List() {
+  // 1. filterで条件に一致するものだけ取り出す
+  const chemists = people.filter(person =>
+    person.profession === 'chemist'
+  );
+  // 2. 各要素に対して処理
+  const listItems = chemists.map(person =>
+    // Note: map()呼び出しの中に直接あるJSX要素は、常にキーが必要です！
+    // 要素の移動・追加・削除された場合に重要になるため
+    // キーはデータに含めるようにする
+    <li key={person.id}>
+      <img
+        src={getImageUrl(person)}
+        alt={person.name}
+      />
+      <p>
+        <b>{person.name}:</b>
+        {' ' + person.profession + ' '}
+        known for {person.accomplishment}
+      </p>
+    </li>
+  );
+
+  // 要素を返す
+  return <ul>{listItems}</ul>;
+}
+```
+
+##### Where to get your key
+
++ DB: ユニークkeyを使う
++ ローカルで生成されたデータ: インクリメントカウンタ、 crypto.randomUUID()、または uuid のようなパッケージを使用
+
+##### Rules of keys 
+
++ キーは兄弟間で一意でなければなりません。ただし、異なる配列のJSXノードに同じキーを使ってもかまいません。
++ キーは変更してはいけません！レンダリング中にキーを生成しないでください。
 
 ### Keeping components pure
 
