@@ -107,6 +107,16 @@ function submitForm(answer) {
 
 + 2つのコンポーネントの状態を常に一緒に変更したいことがある。そのためには、2つのコンポーネントからステートを削除し、最も近い共通の親コンポーネントに移動させ、propsを介して2つのコンポーネントに渡す。これは「ステートを持ち上げる」と呼ばれる。
 
++ HACK:
+  + Q: Formの情報を送信して、別のコンポーネントと共有するときに使えば良い?
+    + formでonSubmit={handleSubmit}
+      + handleSubmitで、フォームからデータを取得
+      + 入力情報をsetFooに入れる
+    + formと同じ階層にあるコンポーネントに、useStateを使って渡す
+
+See:
+https://github.com/tsutaj/atcoder-qq/blob/main/src/app/page.tsx
+
 ## Preserving and resetting state
 
 + コンポーネントを再レンダリングするとき、Reactはツリーのどの部分を残し（更新し）、どの部分を破棄するか、ゼロから再作成するかを決定する必要がある。ほとんどの場合、Reactの自動動作は十分に機能する。デフォルトでは、Reactは、以前にレンダリングされたコンポーネントツリーと「一致する」ツリーの部分を保持します。
@@ -115,6 +125,7 @@ function submitForm(answer) {
 ## Extracting state logic into a reducer
 
 + 多くの状態更新が多くのイベント・ハンドラにまたがっているコンポーネントは、圧倒されることがあります。このような場合、コンポーネントの外部にあるすべての状態更新ロジックを、"reducer "と呼ばれる単一の関数に集約することができます。ユーザーの "アクション "だけを指定するので、イベントハンドラは簡潔になります。ファイルの一番下にあるreducer関数は、各アクションに対してどのように状態を更新するかを指定します！
+  + Q: 状態管理ライブラリのreduxに近い?
 
 ```jsx
 import { useReducer } from 'react';
