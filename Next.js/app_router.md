@@ -132,6 +132,569 @@ $ pnpm dev
 + Server ComponentsとClient Componentsの違い、使うタイミング、おすすめのパターンについて説明
 + Reactを初めて使う場合、React Docsを参照。
 
+### Server Components
+
++ サーバ＆クライアント・コンポーネントにより、開発者はサーバとクライアントにまたがるアプリケーションを構築でき、クライアント側アプリケーションのリッチなインタラクティブ性と、従来のサーバ・レンダリングの改善されたパフォーマンスを組み合わせることができます。
+
+#### Thinking in Server Components
+
++ サーバーとクライアントを活用するハイブリッド・アプリケーションを構築するための新しいメンタル・モデルを導入
+
++ 従来: アプリケーション全体をクライアントサイドでレンダリング
++ 現在: コンポーネントをレンダリングする場所を目的に応じて柔軟に選択できるように
+
++ ページを小さなコンポーネントに分割してみると、大半のコンポーネントは非インタラクティブで、サーバー・コンポーネントとしてサーバー上でレンダリングできることに気づくだろう。小さなインタラクティブなUIには、クライアントコンポーネントを使用する。
+
+#### Why Server Components?
+
++ サーバーのインフラストラクチャをより有効に活用できる
+
++ メリット: 
+  + 最初のページ読み込みが速くなり、クライアント側の JavaScript バンドルのサイズが小さく  
+  + 基本的なクライアント側のランタイムはキャッシュ可能でサイズが予測可能で、アプリケーションが大きくなっても増えることはない
+  + 追加のJavaScriptが追加されるのは、クライアント・コンポーネントを通してアプリケーションでクライアント側のインタラクティブ機能が使用される場合のみ
+
++ Next.jsでルートがロードされると、最初のHTMLがサーバーにレンダリングされます。このHTMLはブラウザで徐々に拡張され、Next.jsとReactのクライアントサイドランタイムを非同期にロードすることで、クライアントがアプリケーションを引き継いでインタラクティブ性を追加できるようにな
+
++ Server Components への移行を容易にするため、App Router 内のすべてのコンポーネントはデフォルトで Server Components になっている
+
++ 'use client'ディレクティブを使用することで、オプションでClient Componentsを選択することもできる
+
+### Client Components
+
++ クライアントコンポーネントを使うと、アプリケーションにクライアントサイドのインタラクティブ機能を追加できます。Next.jsでは、クライアントコンポーネントはサーバー上でプリレンダリングされ、クライアント上でハイドレーションされます。クライアントコンポーネントは、Pages Router のコンポーネントと同じようなものだと考えてください。
+  + Q: ハイドレーションとは?
+
+#### The "use client" directive
+
+```tsx
+// app/counter.tsx
+
+// 以下の1行を追加するだけ
+// importよりも上部に記述する必要がある
+'use client'
+ 
+import { useState } from 'react'
+ 
+export default function Counter() {
+  const [count, setCount] = useState(0)
+ 
+  return (
+    <div>
+      <p>You clicked {count} times</p>
+      <button onClick={() => setCount(count + 1)}>Click me</button>
+    </div>
+  )
+}
+```
+
++ 「use client」は、サーバー専用コードとクライアント・コードの間に位置する。これは、ファイルの一番上、importsの上に置かれ、サーバー専用部分からクライアント部分への境界を越えるカットオフ・ポイントを定義します。ファイルに "use client "が定義されると、そのファイルにインポートされた子コンポーネントを含む他のすべてのモジュールは、クライアントバンドルに含まれるとみなされます。
+  + // グラフで考えると、クライアントコンポーネントと宣言したコンポーネントと子コンポーネントは全てクライアント側となるのは納得できる
+  + 全てのファイルで定義する必要はない + entry pointで一度だけ定義
+
+### When to use Server and Client Components?
+
++ 簡単に決めるには、クライアントコンポーネントのユースケースが決まるまで、サーバーコンポーネント（appディレクトリのデフォルト）を使うことをお勧め
+
++ Server Component
+  + データの取得
+  + バックエンドのリソースに直接アクセス
+  + 機密情報をサーバーに保管（アクセストークン、APIキーなど）
+  + 大きな依存関係をサーバーに残す / クライアントサイドのJavaScriptを減らす
+
++ Client Component
+  + インタラクティブ性とイベントリスナー（onClick()、onChange()など）を追加
+  + ステートとライフサイクル・エフェクトの使用 (useState()、useReducer()、useEffect() など)
+  + ブラウザ専用のAPIを使う
+  + ステート、エフェクト、またはブラウザ専用APIに依存するカスタムフックを使用
+  + Reactのクラスコンポーネントを使用
+
+### Patterns
+
+#### Moving Client Components to the Leaves
+
++ アプリケーションのパフォーマンスを向上させるには、クライアント・コンポーネントを可能な限りコンポーネント・ツリーのリーフに移動させることをお勧めします。
+
++ たとえば、静的な要素（ロゴ、リンクなど）を持つレイアウトと、ステートを使用するインタラクティブな検索バーがあるとします。
+
++ レイアウト全体をクライアントコンポーネントにする代わりに、インタラクティブロジックをクライアントコンポーネント（<SearchBar />など）に移動し、レイアウトをサーバーコンポーネントにします。これにより、レイアウトのすべてのコンポーネントJavascriptをクライアントに送信する必要がなくなります。
+
+```tsx
+// app/layout.tsx
+
+// 子コンポーネントは、サーバ・クライアント両方とも利用できる
+// Q: インポートの順番は関係ない?
+// SearchBar is a Client Component
+import SearchBar from './searchbar'
+// Logo is a Server Component
+import Logo from './logo'
+ 
+// Layout is a Server Component by default
+export default function Layout({ children }: { children: React.ReactNode }) {
+  return (
+    <>
+      <nav>
+        <Logo />
+        <SearchBar />
+      </nav>
+      <main>{children}</main>
+    </>
+  )
+}
+```
+
++ // 書き換えが発生しない部分をサーバコンポーネントで、インタラクティブな要素な部分をクライアントコンポーネントにすると理解したが、良さそうか?
+
+### Composing Client and Server Components
+
++ サーバーコンポーネントとクライアントコンポーネントは、同じコンポーネントツリーで組み合わせることができます。
+
++ 舞台裏では、Reactは以下のようにレンダリングを処理する：
+  + サーバーでは、Reactがすべてのサーバーコンポーネントをレンダリングしてから、結果をクライアントに送信します。
+    + これには、クライアント コンポーネント内にネストされたサーバー コンポーネントも含まれます。
+    + この段階で遭遇したクライアント・コンポーネントはスキップされる。
+  + クライアントでは、Reactがクライアント コンポーネントをレンダリングし、レンダリングされた結果のサーバー コンポーネントをスロットに入れて、サーバーとクライアントで行われた作業をマージします。
+    + Server ComponentがClient Componentの中に入れ子になっている場合、レンダリングされたコンテンツはClient Componentの中に正しく配置されます。
+  
++ Tips
+  + サーバーコンポーネントとクライアントコンポーネントの両方が、HTMLとしてサーバー上にプリレンダリングされます。
+    + Q: プリレンダリングをする理由は?
+
+### Nesting Server Components inside Client Components
+
++ 上記のレンダリングフローを考えると、サーバーコンポーネントをクライアントコンポーネントにインポートする場合、追加のサーバーラウンドトリップが必要になるため、制限があります。
+
++ サポートされていないパターン：サーバーコンポーネントをクライアントコンポーネントにインポートする
+
+```tsx
+'use client'
+ 
+// This pattern will **not** work!
+// You cannot import a Server Component into a Client Component.
+import ExampleServerComponent from './example-server-component'
+ 
+export default function ExampleClientComponent({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  const [count, setCount] = useState(0)
+ 
+  return (
+    <>
+      <button onClick={() => setCount(count + 1)}>{count}</button>
+ 
+      <ExampleServerComponent />
+    </>
+  )
+}
+```
+
++ 推奨パターン: サーバーコンポーネントをプロップとしてクライアントコンポーネントに渡す
++ その代わりに、クライアント・コンポーネントを設計するときに、React propsを使ってサーバー・コンポーネントの「スロット」をマークすることができます。
+
++ Server Componentはサーバー上でレンダリングされ、Client Componentがクライアント上でレンダリングされるとき、「スロット」はServer Componentのレンダリング結果で埋められます。
+
++ 一般的なパターンは、React children propを使用して "スロット "を作成することです。<ExampleClientComponent>をリファクタリングして、一般的なchildren propを受け入れ、<ExampleClientComponent>のインポートと明示的なネストを親コンポーネントに移動することができます。
+
+```tsx
+// app/example-client-component.tsx
+
+'use client'
+ 
+import { useState } from 'react'
+ 
+export default function ExampleClientComponent({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  const [count, setCount] = useState(0)
+ 
+  return (
+    <>
+      <button onClick={() => setCount(count + 1)}>{count}</button>
+
+      // 変更点
+      // 内容については、関心の外にある
+      {children}
+    </>
+  )
+}
+```
+
++ さて、<ExampleClientComponent>は、childrenが何であるかを知らない。Childrenが最終的にServer Componentの結果によって埋められることも知らない。
+
++ ExampleClientComponentが持つ唯一の責任は、最終的にどんなchildrenがどこに配置されるかを決定することです。
+
++ 親Server Componentでは、<ExampleClientComponent>と<ExampleServerComponent>の両方をインポートし、<ExampleClientComponent>の子として<ExampleServerComponent>を渡すことができます：
+
+```tsx
+// app/page.tsx
+
+// This pattern works:
+// You can pass a Server Component as a child or prop of a
+// Client Component.
+import ExampleClientComponent from './example-client-component'
+import ExampleServerComponent from './example-server-component'
+ 
+// Pages in Next.js are Server Components by default
+export default function Page() {
+  return (
+    <ExampleClientComponent>
+      <ExampleServerComponent />
+    </ExampleClientComponent>
+  )
+}
+```
+
++ このアプローチでは、<ExampleClientComponent> と <ExampleServerComponent> のレンダリングは切り離され、独立してレンダリングすることができます。
+
++ Tips
+  + このパターンは、childrenプロパティを持つレイアウトとページですでに適用されているので、追加のラッパーコンポーネントを作成する必要はありません。
+  + Reactコンポーネント（JSX）を他のコンポーネントに渡すことは、常にReactのコンポジションモデルの一部でした。
+  + このコンポジション戦略は、サーバーコンポーネントとクライアントコンポーネントにまたがって機能します。渡されたものがどこに配置されるべきかだけを担当します。
+  + これにより、クライアントコンポーネントがクライアントでレンダリングされる前に、渡されたpropを独立して、この場合サーバでレンダリングすることができます。
+  + インポートされたネストされた子コンポーネントを再レンダリングする親コンポーネントの状態変更を避けるために、「コンテンツを持ち上げる」というまったく同じ戦略が使用されています。
+  + children propに限定されるわけではありません。JSXを渡すために任意のpropを使用できます。
+
+### Passing props from Server to Client Components (Serialization)
+
++ サーバからクライアントコンポーネントに渡される小道具は、シリアライズ可能である必要があります。つまり、関数や日付などの値を直接クライアント・コンポーネントに渡すことはできません。
+
++ App Routerでは、ネットワークの境界はServer ComponentsとClient Componentsの間にある。これは、getStaticProps/getServerSidePropsとページコンポーネントの間に境界があるページとは異なります。サーバーコンポーネント内で取得されたデータは、クライアントコンポーネントに渡されない限りネットワーク境界を越えないため、シリアライズする必要はありません。Server Componentsでのデータ取得については、こちらをご覧ください。
+
+### Keeping Server-Only Code out of Client Components (Poisoning)
+
++ JavaScriptモジュールはサーバーコンポーネントとクライアントコンポーネントの両方で共有することができるため、サーバー上でのみ実行されることを意図していたコードが、クライアントにこっそり入り込む可能性があります。
+
++ 例えば、次のようなデータ・フェッチ関数を考えてみよう：
+
+```ts
+// lib/data.ts
+export async function getData() {
+  const res = await fetch('https://external-service.com/data', {
+    headers: {
+      authorization: process.env.API_KEY,
+    },
+  })
+ 
+  return res.json()
+}
+```
+
++ 一見すると、getDataはサーバーとクライアントの両方で動作するように見える。しかし、環境変数API_KEYの前にNEXT_PUBLICが付けられていないため、サーバーでのみアクセスできるプライベート変数になっています。Next.jsでは、セキュアな情報の漏えいを防ぐため、クライアントコードではプライベートな環境変数を空文字列に置き換えています。
+
++ その結果、getData()をインポートしてクライアント上で実行しても、期待通りに動作しない。また、変数をpublicにすることで、この関数はクライアント上で動作するようになりますが、機密情報が漏れることになります。
+
++ そのため、この関数はサーバー上でのみ実行されることを想定して書かれています。
+
+### The "server only" package
+
++ このような意図しないクライアントによるサーバーコードの利用を防ぐために、サーバー専用パッケージを使用することで、他の開発者が誤ってこれらのモジュールをクライアント・コンポーネントにインポートした場合に、ビルド時にエラーを表示することができます。
+
+```terminal
+pnpm install server-only
+```
+
++ 次に、サーバー専用のコードを含むモジュールにこのパッケージをインポートする：
+
+```js
+import 'server-only'
+ 
+export async function getData() {
+  const res = await fetch('https://external-service.com/data', {
+    headers: {
+      authorization: process.env.API_KEY,
+    },
+  })
+ 
+  return res.json()
+}
+```
+
++ これで、getData()をインポートしたクライアント・コンポーネントは、このモジュールはサーバー上でしか使用できないことを説明するビルド時エラーを受け取ることになる。
+
++ 対応するclient-onlyパッケージは、クライアント専用のコード（例えば、windowオブジェクトにアクセスするコード）を含むモジュールをマークするために使用できます。
+
+### Data Fetching
+
++ クライアント・コンポーネントでデータをフェッチすることも可能ですが、クライアントでデータをフェッチする特別な理由がない限り、サーバー・コンポーネントでデータをフェッチすることをお勧めします。データ取得をサーバーに移すことで、パフォーマンスとユーザーエクスペリエンスが向上します。
+
+### Third-party packages
+
++ Server Componentsは新しいものなので、エコシステム内のサードパーティのパッケージは、useState、useEffect、createContextのようなクライアント専用の機能を使用するコンポーネントに「use client」ディレクティブを追加し始めたばかりです。
+
++ 現在、クライアントのみの機能を使用する npm パッケージのコンポーネントの多くは、まだこのディレクティブを持っていません。これらのサードパーティコンポーネントは、"use client" ディレクティブを持っているので、クライアントコンポーネント内では期待通りに動作しますが、サーバーコンポーネント内では動作しません。
+
++ 例えば、<Carousel />コンポーネントを持つacme-carouselパッケージをインストールしたとします。このコンポーネントは useState を使いますが、まだ "use client" ディレクティブを持っていません。
+
++ クライアントコンポーネント内で<Carousel />を使用すると、期待通りに動作します：
+
+```tsx
+'use client'
+ 
+import { useState } from 'react'
+import { Carousel } from 'acme-carousel'
+ 
+export default function Gallery() {
+  let [isOpen, setIsOpen] = useState(false)
+ 
+  return (
+    <div>
+      <button onClick={() => setIsOpen(true)}>View pictures</button>
+ 
+      {/* Works, since Carousel is used within a Client Component */}
+      {isOpen && <Carousel />}
+    </div>
+  )
+}
+```
+
++ しかし、これをサーバーコンポーネント内で直接使用しようとすると、エラーが表示されます：
+
+```tsx
+import { Carousel } from 'acme-carousel'
+ 
+export default function Page() {
+  return (
+    <div>
+      <p>View pictures</p>
+ 
+      {/* Error: `useState` can not be used within Server Components */}
+      <Carousel />
+    </div>
+  )
+}
+```
+
++ これは、Next.jsが<Carousel />がクライアント専用の機能を使っていることを知らないためです。
+
++ これを解決するには、クライアント専用機能に依存するサードパーティ製コンポーネントを、独自のクライアントコンポーネントでラップします：
+
+```tsx
+'use client'
+ 
+import { Carousel } from 'acme-carousel'
+ 
+export default Carousel
+```
+
++ これで、サーバー コンポーネント内で <Carousel /> を直接使用できるようになりました：
+
+```tsx
+import Carousel from './carousel'
+ 
+export default function Page() {
+  return (
+    <div>
+      <p>View pictures</p>
+ 
+      {/*  Works, since Carousel is a Client Component */}
+      <Carousel />
+    </div>
+  )
+}
+```
+
++ サードパーティのコンポーネントは、クライアント・コンポーネント内で使用する可能性が高いため、ほとんどのコンポーネントをラップする必要はないと考えています。ただし、プロバイダ・コンポーネントはReactのステートとコンテキストに依存しており、通常はアプリケーションのルートで必要になるからです。サードパーティのコンテキスト・プロバイダについては、以下を参照してください。
+
+## Context
+
++ ほとんどのReactアプリケーションは、createContextを介して直接、またはサードパーティ・ライブラリからインポートされたプロバイダ・コンポーネントによって間接的に、コンポーネント間でデータを共有するためにコンテキストに依存している。
+
++ Next.js 13では、コンテキストはクライアントコンポーネント内で完全にサポートされていますが、サーバーコンポーネント内で直接作成したり消費したりすることはできません。これは、サーバーコンポーネントにはReactの状態がなく（インタラクティブではないため）、コンテキストは主に、Reactの状態が更新された後にツリーの奥深くにあるインタラクティブコンポーネントを再レンダリングするために使用されるためです。
+
++ Server Components間でデータを共有する方法については後述しますが、まずはClient Components内でContextを使用する方法を見てみましょう。
+
+### Using context in Client Components
+
++ すべてのコンテキストAPIは、クライアント・コンポーネント内で完全にサポートされています：
+
+```tsx
+'use client'
+ 
+import { createContext, useContext, useState } from 'react'
+ 
+const SidebarContext = createContext()
+ 
+export function Sidebar() {
+  const [isOpen, setIsOpen] = useState()
+ 
+  return (
+    <SidebarContext.Provider value={{ isOpen }}>
+      <SidebarNav />
+    </SidebarContext.Provider>
+  )
+}
+ 
+function SidebarNav() {
+  let { isOpen } = useContext(SidebarContext)
+ 
+  return (
+    <div>
+      <p>Home</p>
+ 
+      {isOpen && <Subnav />}
+    </div>
+  )
+}
+```
+
++ しかし、コンテキスト プロバイダは、現在のテーマなど、グローバルな関心事を共有するために、アプリケーションのルート付近にレンダリングされるのが一般的です。Server Components ではコンテキストがサポートされていないため、アプリケーションのルートでコンテキストを作成しようとするとエラーになります：
+
+```tsx
+import { createContext } from 'react'
+ 
+//  createContext is not supported in Server Components
+export const ThemeContext = createContext({})
+ 
+export default function RootLayout({ children }) {
+  return (
+    <html>
+      <body>
+        <ThemeContext.Provider value="dark">{children}</ThemeContext.Provider>
+      </body>
+    </html>
+  )
+}
+```
+
++ これを解決するには、コンテキストを作成し、そのプロバイダをクライアント・コンポーネントの中にレンダリングします：
+
+```tsx
+'use client'
+ 
+import { createContext } from 'react'
+ 
+export const ThemeContext = createContext({})
+ 
+export default function ThemeProvider({ children }) {
+  return <ThemeContext.Provider value="dark">{children}</ThemeContext.Provider>
+}
+```
+
++ サーバーコンポーネントは、クライアントコンポーネントとしてマークされているので、プロバイダを直接レンダリングできるようになります：
+
+```tsx
+import ThemeProvider from './theme-provider'
+ 
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  return (
+    <html>
+      <body>
+        <ThemeProvider>{children}</ThemeProvider>
+      </body>
+    </html>
+  )
+}
+```
+
++ プロバイダがルートにレンダリングされると、アプリ全体の他のすべてのクライアント・コンポーネントがこのコンテキストを利用できるようになります。
+
++ Tips:
+  + ThemeProvider が <html> ドキュメント全体ではなく {children} だけをラップしていることに注目してください。これにより、Next.js はサーバーコンポーネントの静的な部分を最適化しやすくなります。
+
+### Rendering third-party context providers in Server Components
+
++ サードパーティのnpmパッケージには、アプリケーションのルート近くでレンダリングする必要があるプロバイダが含まれていることがよくあります。これらのプロバイダに "use client "ディレクティブが含まれていれば、Server Components内で直接レンダリングできます。しかし、Server Componentsは非常に新しいので、多くのサードパーティプロバイダはまだこのディレクティブを追加していません。
+
++ use client "が指定されていないサードパーティのプロバイダをレンダリングしようとすると、エラーが発生します：
+
+```tsx
+import { ThemeProvider } from 'acme-theme'
+ 
+export default function RootLayout({ children }) {
+  return (
+    <html>
+      <body>
+        {/*  Error: `createContext` can't be used in Server Components */}
+        <ThemeProvider>{children}</ThemeProvider>
+      </body>
+    </html>
+  )
+}
+```
+
++ これを解決するには、サードパーティプロバイダを独自のクライアントコンポーネントでラップします：
+
+```tsx
+'use client'
+ 
+import { ThemeProvider } from 'acme-theme'
+import { AuthProvider } from 'acme-auth'
+ 
+export function Providers({ children }) {
+  return (
+    <ThemeProvider>
+      <AuthProvider>{children}</AuthProvider>
+    </ThemeProvider>
+  )
+}
+```
+
++ これで、ルート・レイアウト内で<Providers />を直接インポートしてレンダリングできるようになりました。
+
+```js
+import { Providers } from './providers'
+ 
+export default function RootLayout({ children }) {
+  return (
+    <html>
+      <body>
+        <Providers>{children}</Providers>
+      </body>
+    </html>
+  )
+}
+```
+
++ プロバイダをルートにレンダリングすると、これらのライブラリのすべてのコンポーネントとフックが、クライアント・コンポーネント内で期待どおりに動作します。
+
++ サードパーティライブラリがクライアントコードに "use client "を追加したら、ラッパークライアントコンポーネントを削除することができます。
+
+### Sharing data between Server Components
+
++ Server Componentsはインタラクティブではないので、Reactのステートから読み込むことはありません。代わりに、複数のServer Componentsがアクセスする必要がある共通のデータには、ネイティブのJavaScriptパターンを使用できます。例えば、モジュールを使用して、複数のコンポーネント間でデータベース接続を共有することができます：
+
+```ts
+// utils/database.ts
+export const db = new DatabaseConnection()
+```
+
+```tsx
+// app/users/layout.tsx
+
+import { db } from '@utils/database'
+ 
+export async function UsersLayout() {
+  let users = await db.query()
+  // ...
+}
+
+
+// app/users/[id]/page.tsx
+import { db } from '@utils/database'
+ 
+export async function DashboardPage() {
+  let user = await db.query()
+  // ...
+}
+```
+
++ 上記の例では、レイアウトとページの両方がデータベースクエリを行う必要があります。これらの各コンポーネントは、@utils/databaseモジュールをインポートすることで、データベースへのアクセスを共有します。このJavaScriptパターンはグローバル・シングルトンと呼ばれます。
+
+### Sharing fetch requests between Server Components
+
++ データをフェッチするとき、ページやレイアウトとその子コンポーネントの間でフェッチ結果を共有したい場合があります。これはコンポーネント間の不要な結合であり、コンポーネント間で小道具を行き来させることにつながります。
+
++ その代わりに、データを消費するコンポーネントと一緒にデータフェッチをコロケーションすることをお勧めします。フェッチリクエストはサーバーコンポーネントで自動的にメモ化されるので、各ルートセグメントは重複リクエストを心配することなく、必要なデータを正確にリクエストできます。Next.jsはフェッチキャッシュから同じ値を読み込みます。
+
+
 ## TypeScript
 
 ### TypeScript Plugin
@@ -351,9 +914,15 @@ $ npx package-name
 + インポート名の型修飾子(type modifiers on import names)とは?
 
 + Server Componentsとは?
-  + どんなメリットがある?
-  + 使い道は?
-  + デフォルトで設定されているのはなぜ?
+  + Q: どんなメリットがある?
+    + サーバとクライアントを分離して、最初の読み込みを高速化 + JSのバンドルサイズを小さく + パフォーマンス向上
+    + これまでサーバサイドに相当する機能もクライアントサイドにあったので、明確に分割しようとしていると理解すれば良い?
+  + Q: 使い道は?
+  + Q: デフォルトで設定されているのはなぜ?
+    + A: v13への移行を容易にするため 
+  + Q: 従来のサーバ・レンダリングとの違いは?
+  + Q: デメリットは?
+    + 学習コストが増える?
 
 ## 感想
 
