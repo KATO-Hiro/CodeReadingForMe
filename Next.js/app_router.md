@@ -38,6 +38,47 @@
   + △: ベンダーロックインが発生
   + 個人開発だとAWSやGCPはオーバーキルなイメージ&従量課金制度に怖さがある。
 
+## 学ぶ範囲
+
++ Routing: 必須
+  + Defining Routes: 必須
+  + Pages and Layouts: 必須
+  + Linking and Navigating: 必須
+  + Route Groups: ?
+  + Dynamic Routes: ? (次のプロジェクトでは使わない可能性が高い)
+  + Loading UI and Streaming: ほぼ必須?
+  + Error Handling: 必須
+  + Parallel Routes: ?
+  + Intercepting Routes: ?
+  + Route Handlers: ?
+  + Middleware: ?
+  + Project Organization: ?
+  + Internationalization: 優先度やや低め
++ Data Fetching: 必須
+  + Fetching, Caching, and Revalidating: 必須
+  + Patterns: ほぼ必須
+  + Server Actions: おそらく必須
++ Rendering:
+  + Static and Dynamic: ほぼ必須
+  + Client and Server Components: 必須
+  + Edge and Node.js Runtimes: ?
++ Styling: ほぼ必須
+  + Tailwind CSS
++ Caching // やや後回し?
++ Optimizing // やや後回し?
+  + Images // 必須?
+  + Fonts// やや後回し?
+  + Metadata// やや後回し?
+  + Lazy Loading
++ Configuring // やや後回し?
+  + ESLint: 優先的に設定しておく
+  + TypeScript: 必要そうなものだけ
+  + Absolute Imports and Module Path Aliases: 確認はしておく
+  + src Directory: 確認はしておく
+  + Draft Mode: ?
++ Deploying // 必須
+  + Managed Next.js with Vercel
+
 ## 導入
 
 + Next.jsは、Webアプリ用のフレームワーク
@@ -694,6 +735,152 @@ export async function DashboardPage() {
 
 + その代わりに、データを消費するコンポーネントと一緒にデータフェッチをコロケーションすることをお勧めします。フェッチリクエストはサーバーコンポーネントで自動的にメモ化されるので、各ルートセグメントは重複リクエストを心配することなく、必要なデータを正確にリクエストできます。Next.jsはフェッチキャッシュから同じ値を読み込みます。
 
+## App Router
+
++ Appルーターは、Reactの最新機能を使用してアプリケーションを構築するための新しいパラダイムです。すでにNext.jsに慣れ親しんでいる方であれば、App Routerが既存のファイルシステムベースのルーターであるPages Routerの自然な進化形であることがわかるでしょう。
+
++ 新しいアプリケーションには、Appルータの使用をお勧めします。既存のアプリケーションについては、段階的にAppルーターに移行することができます。
+
++ このセクションでは、App Routerで利用可能な機能について説明します：
+
+## Building Your Application
+
++ Next.jsは、柔軟なフルスタックのWebアプリケーションを作成するためのビルディングブロックを提供します。Building Your Applicationのガイドでは、これらの機能の使い方や、アプリケーションの動作をカスタマイズする方法を説明しています。
+
++ Next.jsアプリケーションを構築する際に、ステップバイステップで進めることができるように、セクションとページは基本から応用まで順を追って構成されています。ただし、どのような順番で読んでもかまいませんし、自分のユースケースに該当するページに飛ばしてもかまいません。
+
++ Next.jsが初めての方は、ルーティング、レンダリング、データ取得、スタイリングのセクションから始めることをおすすめします。その後、最適化や設定など、他のセクションをより深く学ぶことができます。最後に、準備ができたら、デプロイとアップグレードのセクションをチェックしてください。
+
+## Routing Fundamentals
+
++ すべてのアプリケーションの骨格はルーティングです。このページでは、Webのルーティングの基本的な概念と、Next.jsでのルーティングの扱い方を紹介
+
+### Terminology (用語解説)
+
++ ツリー：階層構造を視覚化するための規約。例えば、親と子のコンポーネントを持つコンポーネントツリー、フォルダ構造など。
++ サブツリー：ツリーの一部で、新しいルート（最初）から始まり、リーフ（最後）で終わるもの。
++ ルート：ルート・レイアウトなど、ツリーまたはサブツリーの最初のノード。
++ リーフ：子ノードを持たないサブツリーのノード。URLパスの最後のセグメントなど。
+
+// 競プロで学んだグラフ理論の用語とやや意味が異なるので注意
+
++ URLセグメント：スラッシュで区切られたURLパスの一部。
++ URLパス：ドメインの後に来るURLの一部（セグメントで構成される）。
+
+### The app Router
+
++ バージョン13で、Next.jsはReact Server Componentsをベースにした新しいApp Routerを導入し、共有レイアウト、ネストされたルーティング、ロードステート、エラー処理などをサポートした。
+
++ App Routerは、appという新しいディレクトリで動作します。appディレクトリは、pagesディレクトリと並行して動作し、段階的な導入を可能にします。これにより、アプリケーションのいくつかのルートを新しい動作に移行させる一方で、他のルートを以前の動作のためにpagesディレクトリに残しておくことができます。もしあなたのアプリケーションがpagesディレクトリを使うのであれば、Pages Routerのドキュメントも参照してください。
+
++ Tips: アプリルーターはページルーターよりも優先される
+
++ デフォルトでは、アプリ内のコンポーネントはReact Server Componentsです。これはパフォーマンスの最適化であり、簡単に採用することができます。また、クライアント・コンポーネントを使用することもできます。
+
+// これまでのバージョンから大きく変更された点の一つ
+
+### Roles of Folders and Files
+
++ Next.jsはファイルシステム・ベースのルーターを使う：
+
++ フォルダはルートを定義するために使用されます。ルートは、ネストされたフォルダのシングルパスで、ルートフォルダから最終的なリーフフォルダ（page.jsファイルを含む）まで、ファイルシステムの階層をたどります。ルートの定義」を参照してください。
++ ファイルは、ルートセグメントに対して表示されるUIを作成するために使用されます。特殊ファイルを参照してください。
+
+// ぱっと見ではv12までとそんなに変わっていなさそう
+
+### Route Segments
+
++ ルートの各フォルダーはルートセグメントを表します。各ルートセグメントは URL パスの対応するセグメントにマップされます。
+
+### Nested Routes
+
++ ネストされたルートを作成するには、フォルダ同士をネストします。たとえば、appディレクトリに2つの新しいフォルダをネストすることで、新しい/dashboard/settingsルートを追加できます。
+
+```md
+/ (Root segment)
+dashboard (Segment)
+settings (Leaf segment)
+```
+
+### File Conventions (規約)
+
++ Next.jsは、ネストされたルートで特定の動作をするUIを作成するための特別なファイル群を提供します：
+
++ layout: レイアウト セグメントとその子の共有UI
++ page: ページ ルートのユニークなUIとルートの一般公開
++ loading: セグメントとその子の UI をロードする
++ not-found セグメントとその子の UI が見つからない
++ error: セグメントとその子のためのエラー UI
++ global-error グローバルエラー UI
++ route: サーバーサイド API エンドポイント
++ template: 特殊化された再レンダリングされたレイアウトUI
++ default: パラレルルートのデフォルトフォールバックUI
+
++ Tips:
+  + これらのファイルの拡張子は、.js、.jsx、.tsxが利用できる
+
++ Q: v12までの_app.tsxとかはどこに行った?
+  + App Routerの場合は使わない?
+
+### Component Hierarchy
+
++ ルートセグメントの特別なファイルで定義されたReactコンポーネントは、特定の階層でレンダリングされます：
+
+layout.js
+template.js
+error.js (React error boundary)
+loading.js (React suspense boundary)
+not-found.js (React error boundary)
+page.js or nested layout.js
+
+```jsx
+<Layout>
+  <Template>
+    <ErrorBoundary fallback={<Error />}>
+      <Suspense fallback={<Loading />}>
+        <ErrorBoundary fallback={<NotFound />}>
+          <Page />
+        </ErrorBoundary>
+      </Suspense>
+    </ErrorBoundary>
+  </Template>
+</Layout>
+```
+
++ Q: Suspenseとはどんな機能?どんなときに使う
++ Q: fallbackとは?
+
++ 入れ子になったルートでは、セグメントのコンポーネントは、親セグメントのコンポーネントの中に入れ子になります。
+
+### Colocation
+
++ 特別なファイルに加え、独自のファイル（コンポーネント、スタイル、テストなど）をappディレクトリのフォルダ内に配置するオプションもあります。
+
++ これは、フォルダがルートを定義する一方で、page.jsまたはroute.jsによって返されるコンテンツだけが公開アドレスになるためです。
+  + // 他のフレームワークのindexページに相当するものと思えば良い?
+
+```
+- app
+  - components
+    - button.js
+  - lib
+    - constants.js
+  - dashboard
+    - pages.js // 公開
+    - nav.js
+  - api
+    - route.js  // 公開
+    - db.js
+```
+
+### Advanced Routing Patterns
+
++ App Routerはまた、より高度なルーティングパターンの実装に役立つ一連の規約も提供する。これらには以下が含まれる：
+  + 並行ルーティング：同時に2つ以上のページを同じビューに表示し、独立してナビゲートできるようにします。独自のサブナビゲーションを持つ分割ビューに使用できます。例：ダッシュボード
+  + ルートのインターセプト：ルートをインターセプトして、別のルートのコンテキストに表示できます。現在のページのコンテキストを維持することが重要な場合に使用できます。例：あるタスクの編集中にすべてのタスクを表示する、フィード内の写真を拡大する、など。
++ これらのパターンによって、よりリッチで複雑なUIを構築することができ、これまで小規模なチームや個人開発者が実装するのが複雑だった機能を民主化することができます。
+
+// シンプルなappである限りは、後回しにして良さそう
 
 ## TypeScript
 
