@@ -130,6 +130,17 @@
 
 + npmやyarnの代わりに、pnpmを使用してみる。
 
+Note: Dockerを利用する場合は、以下のコマンドを一旦コメントアウトしておく
+
+```Dockerfile
+# ADD package.json /package.json
+
+# RUN pnpm install
+# RUN pnpm build
+
+# CMD ["pnpm", "dev"]
+```
+
 ```terminal
 // 依存関係としてパッケージをインストールするのではなく、レジストリから取得し、ホットロードして、そのパッケージが公開するデフォルトのコマンドバイナリを実行
 pnpm dlx create-next-app
@@ -1362,6 +1373,51 @@ import { Button } from '@/components/button'
 + 多言語に対応したコンテンツのルーティングやレンダリングを設定できます。サイトを異なるロケールに適応させるには、翻訳されたコンテンツ（ローカリゼーション）と国際化されたルートが含まれる
 
 // 次期プロジェクトで多言語対応が必要になったときに読む
+
+## Data Fetching
+
+### Data Fetching, Caching, and Revalidating
+
++ 主な方法
+  1. サーバー上で、フェッチAPIを使用
+  2. サーバー上で、サードパーティのライブラリを使用
+  3. クライアントで、サードパーティのライブラリを使用
+
+#### Fetching Data on the Server with fetch
+
++ Next.jsは、ネイティブのfetch Web APIを拡張し、サーバー上の各fetchリクエストに対するキャッシュと再検証の動作を設定できるようにした。React は fetch を拡張して、React コンポーネント ツリーのレンダリング中にフェッチ リクエストを自動的にメモします。
+
++ サーバーコンポーネント、ルートハンドラ、およびサーバーアクションで、async/await を使用して fetch を使用できます。
+
+```tsx
+// 非同期で処理
+async function getData() {
+  // fetchでレスポンスを取得
+  const res = await fetch('https://api.example.com/...')
+  // The return value is *not* serialized
+  // You can return Date, Map, Set, etc.
+ 
+  // エラー処理
+  if (!res.ok) {
+    // This will activate the closest `error.js` Error Boundary
+    throw new Error('Failed to fetch data')
+  }
+ 
+  // jsonを返す
+  return res.json()
+}
+ 
+export default async function Page() {
+  const data = await getData()
+ 
+  return <main></main>
+}
+```
+
++ Tips
+  + Next.jsは、クッキーやヘッダーなど、サーバーコンポーネントのデータを取得する際に必要となる便利な関数を提供します。これらはリクエスト時刻の情報に依存するため、ルートが動的にレンダリングされます。
+  + Routeハンドラでは、RouteハンドラはReactコンポーネントツリーの一部ではないため、フェッチリクエストはメモされません。
+  + TypeScriptのServer Componentでasync/awaitを使用するには、TypeScript 5.1.3以上と@types/react 18.2.8以上が必要です。
 
 ## TypeScript
 
