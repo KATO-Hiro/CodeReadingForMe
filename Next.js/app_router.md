@@ -1419,6 +1419,77 @@ export default async function Page() {
   + Routeハンドラでは、RouteハンドラはReactコンポーネントツリーの一部ではないため、フェッチリクエストはメモされません。
   + TypeScriptのServer Componentでasync/awaitを使用するには、TypeScript 5.1.3以上と@types/react 18.2.8以上が必要です。
 
+## Optimizing
+
+### Image Optimization
+
++ Next.js Imageコンポーネントは、HTMLの<img>要素を拡張し、画像を自動的に最適化
+  + サイズの最適化：WebPやAVIFなどの最新の画像フォーマットを使用して、各デバイスに適したサイズの画像を自動的に提供します。
+  + 視覚的な安定性：画像の読み込み時に自動的にレイアウトがずれるのを防ぎます。
+  + ページ読み込みの高速化：画像は、ブラウザのネイティブレイジーローディングを使用して、ビューポートに入ったときにのみ読み込まれます。
+  + 資産の柔軟性：リモートサーバーに保存された画像でも、オンデマンドで画像サイズを変更できます。
+
+### Usage
+
+```ts
+import Image from 'next/image'
+```
+
+### Local Images
+
++ ローカル画像を使用するには、.jpg、.png、または.webp画像ファイルをインポートします。
+
++ Next.jsは、インポートされたファイルに基づいて、画像の幅と高さを自動的に決定します。これらの値は、画像の読み込み中に累積レイアウトがずれるのを防ぐために使用されます
+
+```ts
+import Image from 'next/image'
+import profilePic from './me.png'
+ 
+export default function Page() {
+  return (
+    <Image
+      src={profilePic}
+      alt="Picture of the author"
+      // width={500} automatically provided
+      // height={500} automatically provided
+      // blurDataURL="data:..." automatically provided
+      // placeholder="blur" // Optional blur-up while loading
+    />
+  )
+}
+```
+
++ 警告: 警告動的なawait import()やrequire()はサポートされていない。ビルド時に解析できるように、インポートは静的でなければなりません。
+
+### Examples
+
+#### Responsive
+
+```ts
+import Image from 'next/image'
+import mountains from '../public/mountains.jpg'
+ 
+export default function Responsive() {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column' }}>
+      <Image
+        alt="Mountains"
+        // Importing an image will
+        // automatically set the width and height
+        src={mountains}
+        sizes="100vw"
+        // Make the image display full width
+        style={{
+          width: '100%',
+          height: 'auto',
+        }}
+      />
+    </div>
+  )
+}
+```
+
+
 ## TypeScript
 
 ### TypeScript Plugin
