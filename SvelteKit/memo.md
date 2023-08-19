@@ -85,12 +85,54 @@ VSCode拡張
 + `vite.config.js` : Viteの設定
   + SvelteKitはViteを使用しているため、ホットモジュールの置き換え、TypeScriptのサポート、静的アセットの処理など、Viteの機能を使用することができます
 
++ srcにはアプリのソースコードが入ります。src/app.htmlはページテンプレート（SvelteKitは%sveltekit.head%と%sveltekit.body%を適宜置き換えます）で、src/routesはアプリのルートを定義します。
+  + routesのページを管理するファイルが、+page.svelte // (+)がファイル名についている
++ staticにはアプリのデプロイ時に含めるべきアセット（favicon.pngやrobots.txtなど）が含まれる
+
 + Note: "type"も指定されていることに注意：「これは、.jsファイルがレガシーなCommonJSフォーマットではなく、デフォルトでネイティブJavaScriptモジュールとして扱われることを意味する。
+
+### Routing
+
+#### Pages
+
++ ファイルシステムベースのルーティングを採用
+
++ src/routesの中にある+page.svelteファイルはすべて、アプリ内にページを作成します。もし/aboutに移動すると、404 Not Foundエラーが表示されます。
+  + src/routes/+page.svelte // Homeページ(相当)
+  + src/routes/hoge/+page.svelte // hogeページ
+  + // +page.svelte = 他のFWの/indexページに相当すると理解した
+
++ 従来のマルチページアプリとは異なり、/aboutに移動して戻ると、シングルページアプリのように現在のページのコンテンツが更新されます。これにより、高速なサーバー・レンダリングによる起動と、瞬時のナビゲーションという、両方の長所を得ることができる。(この動作は設定可能）。
+
+#### Layouts
+
++ アプリの異なるルートは、共通のUIを共有することがよくあります。それぞれの+page.svelteコンポーネントでそれを繰り返す代わりに、同じディレクトリ内のすべてのルートに適用される+layout.svelteコンポーネントを使うことができます。
+  + // src/routes/+layout.svelteに、UIの共通部分をまとめる
+  + <slot />要素は、ページ内容がレンダリングされる場所です
+
++ layout.svelteファイルは、兄弟の+page.svelte（存在する場合）を含む、すべての子ルートに適用されます。レイアウトは任意の深さまでネストできます。
+
+#### Route parameters
+
++ 動的なパラメータでルートを作成するには、有効な変数名を角括弧で囲んでください。
+  + 例えば、src/routes/blog/[slug]/+page.svelteのようなファイルは、/blog/one、/blog/two、/blog/threeなどにマッチするルートを作成します。
+  + // src/routes/hoge/[slug]/+page.svelte
+
++ Note: foo/[bar]x[baz]は有効なルートで、[bar]と[baz]は動的なパラメータです。
+
+### Loading data
+
+#### Page data
 
 ## 疑問点
 
 + Viteはどんな技術?
   + SvelteKitにデフォルトで組み込まれているのはなぜ?
++ SvelteKitは、どこまでカバーしている?
+  + フロントエンドのみ? or 簡単なAPIなら利用可? / APIは別のFWの方が望ましい?
+  + DBを扱うには?
+  + ログイン機能の実装をどのように行う?
+    + 公式サンプルがあれば確認
 
 + 。
 
