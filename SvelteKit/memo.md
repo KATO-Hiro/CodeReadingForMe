@@ -122,6 +122,8 @@ VSCode拡張
 
 ### Loading data
 
+#### Page data
+
 + SvelteKitの仕事の核心は、次の3つに集約される：
   + ルーティング - どのルートが入ってきたリクエストにマッチするかを把握する。
   + ロード - ルートに必要なデータを取得します。
@@ -201,7 +203,7 @@ export function load({ params }) {
 
 + エラー処理は後ほど詳しく学ぶ
 
-#### Page data
+#### Layout data
 
 ## 疑問点
 
