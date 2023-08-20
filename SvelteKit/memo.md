@@ -222,7 +222,57 @@ export function load({ params }) {
 
 ### Headers and cookies
 
+#### Setting headers
 
++ load関数の内部では（form actions、hooks、API routesと同様に、後で学びます）、setHeaders関数にアクセスすることができます。当然のことながら-レスポンスにヘッダーを設定するために使うことができる。
+
++ 最も一般的なのは、Cache-Controlレスポンスヘッダでキャッシュの動作をカスタマイズするために使用することですが、このチュートリアルでは、あまり推奨されない、より劇的なことを行います：
+
+```svelte
+// src/routes/+page.server.js
+// プレーンテキストでページが表示される
+export function load({ setHeaders }) {
+  setHeaders({
+    'Content-Type': 'text/plain',
+  });
+}
+```
+
++ (効果を見るにはiframeをリロードする必要があるかもしれない）。
+
+#### Reading and writing cookies
+
++ setHeaders関数はSet-Cookieヘッダーでは使用できません。代わりに、Cookies APIを使用する必要があります。
+
++ load関数では、cookies.get(name, options)でクッキーを読み込むことができます：
+
++ クッキーを設定するには、cookies.set(name, value, options)を使ってください。ブラウザのデフォルトの動作は、やや無駄ですが、現在のパスの親にクッキーを設定するので、クッキーを設定するときにパスを明示的に設定することを強く推奨します。
+
+```svelte
+// src/routes/+page.server.js
+export function load({ cookies }) {
+  const visited = cookies.get('visited');
+
+  cookies.set('visited', 'true', { path: '/' });
+
+  return { visited };
+}
+
+```
+
++ // Q: Cookiesにはどんな情報を含めることが多い?
+
++ これで、iframeをリロードすると、Hello stranger！がHello friend！になる。
+
++ cookies.set(name, ...) を呼び出すと、Set-Cookie ヘッダが書き込まれますが、クッキーの内部マップも更新されます。Cookies.getとCookies.setに渡されるオプションは、Cookieドキュメントのparseオプションとserializeオプションに対応しています。SvelteKitでは、Cookieをより安全にするために以下のデフォルトが設定されています：
+
+```md
+{
+  httpOnly: true,
+  secure: true,
+  sameSite: 'lax'
+}
+```
 
 ## 疑問点
 
