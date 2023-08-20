@@ -131,6 +131,12 @@ VSCode拡張
 
 + アプリの各ページは、+page.svelteファイルと一緒に+page.server.jsファイルでロード関数を宣言できます。ファイル名が示すように、このモジュールはクライアント側のナビゲーションを含め、サーバー上でのみ実行されます。src/routes/blog/+page.server.jsファイルを追加して、src/routes/blog/+page.svelte内のハードコードされたリンクを実際のブログ記事データに置き換えることができるようにしてみましょう
 
+// 急に難しくなってきたが、この部分は次期プロジェクトでも使うので、マスターしたい。
+// src/routes/hoge/+page.server.jsで、一覧のデータをload()で取得 + 属性を対応付け
+// src/routes/hoge/+page.svelteで、一覧ページを表示
+// 詳細ページは、hoge/[slug]/の形式に変更するだけで、一覧ページとほぼ同じ
+
+
 ```svelte
 // 記事一覧ページ
 // src/routes/blog/+page.server.js 
