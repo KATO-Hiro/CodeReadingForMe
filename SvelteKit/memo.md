@@ -274,6 +274,33 @@ export function load({ cookies }) {
 }
 ```
 
+### Shared modules
+
+#### The $lib alias
+
++ SvelteKitはディレクトリベースのルーティングを使用しているため、モジュールやコンポーネントを、それらを使用するルートと一緒に配置するのは簡単です。良い経験則は、「使用する場所の近くにコードを配置する」です。
+
++ コードが複数の場所で使われることもあります。このような場合、インポートの前に./../../../を付けることなく、すべてのルートからアクセスできる置き場所があると便利です。SvelteKitでは、その場所がsrc/libディレクトリです。このディレクトリにあるものはすべて、$libエイリアスを介してsrcのどのモジュールからもアクセスできます。
+
++ この演習の+page.svelteファイルは、どちらもsrc/lib/message.jsをインポートしている。しかし、/a/deeply/nested/routeに移動すると、プレフィックスが間違っているため、アプリが壊れてしまいます。代わりに$lib/message.jsを使うように更新してください
+
+```svelte
+// src/routes/a/deeply/nested/route/+page.svelte
+<script>
+  // ../../libのような表記の代わりに、$lib
+  import { message } from '$lib/message';
+</script>
+
+<h1>a deeply nested route</h1>
+<p>{message}</p>
+
+```
+
++ 別プロジェクトで../../../../みたいなインポートをしていたので、これは楽そう
+  + 特にファイル構造を変更したときにも、変更箇所が少なくなりそう
+
+### Forms
+
 ## 疑問点
 
 + Viteはどんな技術?
