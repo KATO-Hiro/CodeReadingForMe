@@ -203,7 +203,26 @@ export function load({ params }) {
 
 + エラー処理は後ほど詳しく学ぶ
 
++ ハマった点
+  + blogページ、および、詳細ページが表示されない
+  + 理由: 5xx系のエラーだったので、サーバが応答していなかった
+  + 対処方法: Dockerのコンテナを再起動 + rebuild & tsconfigにパスを追加
+
 #### Layout data
+
++ layout.svelteファイルが子ルートごとにUIを作成するように、+layout.server.jsファイルは子ルートごとにデータを読み込む
+
++ ブログの投稿ページに「その他の投稿」サイドバーを追加したいとします。src/routes/blog/[slug]/+page.server.jsで行っているように、src/routes/blog/+page.server.jsのload関数から要約を返すこともできますが、それでは繰り返しになります。
+
++ 代わりに、src/routes/blog/+page.server.jsをsrc/routes/blog/+layout.server.jsにリネームしてみましょう。data.summariesはまだページで利用可能です。
+
++ レイアウト（とその下のページ）は、親である+layout.server.jsからdata.summarariesを継承します。
+
++ ある投稿から別の投稿に移動するとき、私たちはその投稿のデータだけを読み込む必要があります。詳細は無効化に関するドキュメントを参照してください。
+
+### Headers and cookies
+
+
 
 ## 疑問点
 
