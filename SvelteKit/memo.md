@@ -122,6 +122,79 @@ VSCode拡張
 
 ### Loading data
 
++ SvelteKitの仕事の核心は、次の3つに集約される：
+  + ルーティング - どのルートが入ってきたリクエストにマッチするかを把握する。
+  + ロード - ルートに必要なデータを取得します。
+  + レンダリング - HTMLを生成する（サーバーで）、またはDOMを更新する（ブラウザで）。
+
++ ここまで、ルーティングとレンダリングの仕組みを見てきた。中間の部分であるローディングについて話そう。
+
++ アプリの各ページは、+page.svelteファイルと一緒に+page.server.jsファイルでロード関数を宣言できます。ファイル名が示すように、このモジュールはクライアント側のナビゲーションを含め、サーバー上でのみ実行されます。src/routes/blog/+page.server.jsファイルを追加して、src/routes/blog/+page.svelte内のハードコードされたリンクを実際のブログ記事データに置き換えることができるようにしてみましょう
+
+```svelte
+// 記事一覧ページ
+// src/routes/blog/+page.server.js 
+// ダミーデータを取得
+import { posts } from './data.js';
+
+// load関数を定義
+export function load() {
+  return {
+    // 一つずつデータを取り出す
+    summaries: posts.map((post) => ({
+      slug: post.slug,
+      title: post.title,
+    })),
+  };
+}
+
+
+// src/routes/blog/+page.svelte
+// 記事一覧を表示
+<script>
+  // Q: export letの復習が必要そう
+  // Q: このdataは、data.jsと同じと考えて良いのか?
+  export let data;
+</script>
+
+<h1>blog</h1>
+
+<ul>
+  {#each data.summaries as { slug, title }}
+    <li><a href="/blog/{slug}">{title}</a></li>
+  {/each}
+</ul>
+
+
+// 指定した記事を表示するページ
+// src/routes/blog/[slug]/+page.server.js 
+import { error } from '@sveltejs/kit';
+import { posts } from '../data.js';
+
+export function load({ params }) {
+  // 合致するページの内容を取得 
+  const post = posts.find((post) => post.slug === params.slug);
+
+  // Not found対策
+  if (!post) throw error(404);
+
+  return { post };
+}
+
+// src/routes/blog/[slug]/+page.svelte
+<script>
+  export let data;
+</script>
+
+<h1>{data.post.title}</h1>
+<div>{@html data.post.content}</div>
+
+```
+
++ Note: チュートリアルでは、src/routes/blog/data.jsからデータをインポートします。実際のアプリでは、データベースやCMSからデータを読み込むことが多いと思いますが、ここではこのようにします。
+
++ エラー処理は後ほど詳しく学ぶ
+
 #### Page data
 
 ## 疑問点
