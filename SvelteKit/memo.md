@@ -586,6 +586,53 @@ export const actions = {
 
 #### Progressive enhancement
 
++ <form>を使用しているため、ユーザーがJavaScriptを持っていなくてもアプリは動作します（おそらく皆さんが思っている以上によくあることです）。これは素晴らしいことで、私たちのアプリが弾力的であることを意味します。
+
++ ほとんどの場合、ユーザーはJavaScriptを持っています。そのような場合、SvelteKitがクライアントサイドのルーティングを使用して<a>要素を段階的に拡張していくのと同じように、エクスペリエンスを段階的に拡張していくことができます。
+
++ enhance関数を$app/forms...からインポートする。
+
++ そして、<form>要素にuse:enhanceディレクティブを追加します：
+
++ これだけだ！JavaScriptが有効になっている場合、use:enhanceは全ページのリロードを除いてブラウザネイティブの動作をエミュレートします。それは
+  + フォームのプロップを更新する
+  + 成功したレスポンスに対してすべてのデータを無効にし、ロード関数を再実行させる
+  + リダイレクトレスポンスで新しいページに移動する
+  + エラーが発生した場合、最も近いエラーページをレンダリングする
+
++ ページをリロードするのではなく、更新するようになったので、トランジションのような派手なことができるようになった：
+
+```svelte
+<script>
+  // インポート
+  import { fly, slide } from 'svelte/transition';
+  ...
+</script>
+
+<div class="centered">
+  ...
+  // use:enhanceを追加
+  <form method="POST" action="?/create" use:enhance>
+    <label>
+      add a todo:
+      <input name="description" value={form?.description ?? ''} autocomplete="off" required />
+    </label>
+  </form>
+
+  <ul class="todos">
+    {#each data.todos as todo (todo.id)}
+      // 動作を指定できる
+      <li in:fly={{ y: 20 }} out:slide>
+        ...
+      </li>
+    {/each}
+  </ul>
+</div>
+
+```
+
+#### Customizing use:enhance
+
 ## 疑問点
 
 + Viteはどんな技術?
