@@ -301,6 +301,126 @@ export function load({ cookies }) {
 
 ### Forms
 
+#### The <form> element
+
++ 読み込みの章では、サーバーからブラウザにデータを送る方法を説明しました。時には逆方向にデータを送る必要があり、そこで<form>（ウェブプラットフォームのデータ送信方法）の出番となります。
+
++ Todoアプリを作ってみよう。src/lib/server/database.jsにインメモリ・データベースをセットアップし、src/routes/+page.server.jsのload関数でCookies APIを使っているので、ユーザーごとのTodoリストを持つことができる：
+
+```svelte
+// src/route/+page.svelte
+<div class="centered">
+  <h1>todos</h1>
+
+  // POSTメソッドを使用
+  <form method="POST">
+    <label>
+      add a todo:
+      <input name="description" autocomplete="off" />
+    </label>
+  </form>
+
+  // 一覧を表示
+  <ul class="todos">
+    {#each data.todos as todo (todo.id)}
+      <li>
+        {todo.description}
+      </li>
+    {/each}
+  </ul>
+</div>
+```
+
++ <input>に何かを入力してEnterを押すと、ブラウザは現在のページにPOSTリクエストを行います（method="POST "属性があるため）。しかし、POSTリクエストを処理するサーバーサイドのアクションを作成していないため、エラーになります。では、そうしましょう：
+
+```svelte
+// src/routes/+page.server.js
+// DBサーバ(mock)からデータを読み込み
+import * as db from '$lib/server/database.js';
+
+// load関数を定義
+export function load({ cookies }) {
+  // Q: ユーザidはクッキーに入れるとしても、パスワードなどの機密情報はそのままだとマズいのでは?
+  const id = cookies.get('userid');
+
+  if (!id) {
+    // Q: crypto.randomUUID()とは?
+    // ユニークなidを生成してくれると思えば良い?
+    cookies.set('userid', crypto.randomUUID(), { path: '/' });
+  }
+
+  return {
+    // DBに対する操作のうち、一覧の取得
+    todos: db.getTodos(id) ?? [],
+  };
+}
+
+// Q: 基礎知識がないせいか、actionsとform + Enterキーとの対応関係が分かっていない
+// on:clickなどでイベントが発火するのは理解できるが、特に設定した記憶がない
+// Q: ボタンクリックで更新する方法と何が違う?
+export const actions = {
+  // Q: defaultは何のデフォルトであることを表している?
+  default: async ({ cookies, request }) => {
+    const data = await request.formData();
+    db.createTodo(cookies.get('userid'), data.get('description'));
+  },
+};
+```
+
++ リクエストは標準的なRequestオブジェクトです。await request.formData()はFormDataインスタンスを返します。
+
++ Enterを押すと、データベースが更新され、新しいデータでページがリロードされます。
+
++ データは自動的に更新されます。そして、<form>要素を使っているので、このアプリはJavaScriptが無効になっていたり、利用できなかったりしても動作します。
+
+// server.jsを追加したときは、reloadだけでは不十分な場合もありそう
+// pnpm devをすると、サーバエラーが解消した
+
+```js
+// src/lib/server/database.js
+// In a real app, this data would live in a database,
+// rather than in memory. But for now, we cheat.
+
+// Q: DBファイルは一つ? or ある程度巨大になってきたら分割?
+// Q: 本物のDBに接続するにはどうしたらいい?
+const db = new Map();
+
+export function getTodos(userid) {
+  if (!db.get(userid)) {
+    db.set(userid, [
+      {
+        id: crypto.randomUUID(),
+        description: 'Learn SvelteKit',
+        done: false,
+      },
+    ]);
+  }
+
+  return db.get(userid);
+}
+
+export function createTodo(userid, description) {
+  const todos = db.get(userid);
+
+  todos.push({
+    id: crypto.randomUUID(),
+    description,
+    done: false,
+  });
+}
+
+export function deleteTodo(userid, todoid) {
+  const todos = db.get(userid);
+  const index = todos.findIndex((todo) => todo.id === todoid);
+
+  if (index !== -1) {
+    todos.splice(index, 1);
+  }
+}
+```
+
+#### Named form actions
+
 ## 疑問点
 
 + Viteはどんな技術?
