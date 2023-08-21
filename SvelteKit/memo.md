@@ -725,6 +725,48 @@ export const actions = {
 
 + 削除の場合、サーバーが何かを検証するのを待つ必要はない：
 
+### API routes
+
++ SvelteKitで作成できるのはページだけではありません。HTTPメソッドに対応する関数をエクスポートする+server.jsファイルを追加することで、APIルートを作成することもできます：GET、PUT、POST、PATCH、DELETEです。
+
++ このアプリは、ボタンをクリックすると/roll APIルートからデータを取得します。src/routes/roll/+server.jsファイルを追加して、そのルートを作成します：
+
++ ボタンをクリックすると動作するようになった。
+
++ リクエストハンドラはResponseオブジェクトを返す必要があります。APIルートからJSONを返すのが一般的なので、SvelteKitはこれらのレスポンスを生成する便利な関数を提供しています：
+
+```js
+//src/routes/roll/+server.js
+import { json } from '@sveltejs/kit';
+
+// メソッド名が全て大文字になっている!!
+export function GET() {
+  const number = Math.floor(Math.random() * 6) + 1;
+
+  // json形式
+  return json(number);
+}
+```
+
+```svelte
+<script>
+  let number;
+
+  async function roll() {
+    const response = await fetch('/roll');
+    number = await response.json();
+  }
+</script>
+
+<button on:click={roll}>Roll the dice</button>
+
+{#if number !== undefined}
+  <p>You rolled a {number}</p>
+{/if}
+```
+
+// Next.jsみたいに、api/hogeみたいな形式で呼び出せる
+
 ## 疑問点
 
 + Viteはどんな技術?
