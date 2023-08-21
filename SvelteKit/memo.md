@@ -481,6 +481,111 @@ export const actions = {
 
 #### Validation
 
++ ユーザーはいたずら好きで、チャンスがあればあらゆる種類の無意味なデータを送信します。彼らが混乱を引き起こさないようにするには、フォームデータを検証することが重要です。
+
++ 防御の第一線はブラウザに内蔵されているフォームバリデーションで、例えば<input>を必須とマークすることが簡単にできます：
+
++ <input>が空の状態でEnterキーを押してみてください。
+
+```svelte
+<script>
+  export let data;
+  export let form;
+</script>
+
+<div class="centered">
+  <h1>todos</h1>
+
+  // フォームにアクセス
+  // 入力エラーがあれば表示
+  {#if form?.error}
+    <p class="error">{form.error}</p>
+  {/if}
+
+  <form method="POST" action="?/create">
+    // required属性をつけることで、入力を強制できる
+    <label>
+      add a todo:
+      <input name="description" value={form?.description ?? ''} autocomplete="off" required />
+    </label>
+  </form>
+
+  <ul class="todos">
+    {#each data.todos as todo (todo.id)}
+      <li>
+        <form method="POST" action="?/delete">
+          <input type="hidden" name="id" value={todo.id} />
+          <span>{todo.description}</span>
+          <button aria-label="Mark as complete" />
+        </form>
+      </li>
+    {/each}
+  </ul>
+</div>
+
+<style>
+  ...
+</style>
+```
+
+
++ このようなバリデーションは役に立ちますが、不十分です。いくつかのバリデーションルール（一意性など）は<input>属性では表現できませんし、もしユーザーがエリートハッカーであれば、ブラウザのdevtoolsを使って属性を削除してしまうかもしれません。このような悪ふざけから守るためには、常にサーバーサイドのバリデーションを使うべきです。
+
++ src/lib/server/database.js で、記述が存在し、一意であることを検証する
+
+```svelte
+// src/lib/server/database.js
+...
+export function createTodo(userid, description) {
+  // 入力がない場合への対処
+  if (description === '') {
+    throw new Error('todo must have a description');
+  }
+
+  const todos = db.get(userid);
+
+  // 重複への対処
+  if (todos.find((todo) => todo.description === description)) {
+    throw new Error('todos must be unique');
+  }
+
+  todos.push({
+    id: crypto.randomUUID(),
+    description,
+    done: false,
+  });
+}
+```
+
++ 重複するTodoを送信してみてください。やばい！SvelteKitは不親切なエラーページを表示します。サーバー上では「todoは一意でなければならない」というエラーが表示されますが、SvelteKitは予期せぬエラーメッセージをユーザーから隠します。
+
++ 同じページに留まり、何が間違っているのかを表示してユーザーが修正できるようにする方がずっと良いでしょう。そのためには、fail 関数を使用してアクションのデータを適切な HTTP ステータスコードとともに返します：
+
+```js
+// src/routes/+page.server.js
+export const actions = {
+  create: async ({ cookies, request }) => {
+    const data = await request.formData();
+
+    // エラーが発生したらキャッチ
+    try {
+      db.createTodo(cookies.get('userid'), data.get('description'));
+    } catch (error) {
+      return fail(422, {
+        description: data.get('description'),
+        error: error.message,
+      });
+    }
+  },
+
+```
+
++ src/routes/+page.svelteでは、フォームプロップを通して返された値にアクセスすることができます：
+
++ Note: 例えば、データが保存されたときに'success!'メッセージを表示するために、failでラップせずにアクションからデータを返すこともできます。
+
+#### Progressive enhancement
+
 ## 疑問点
 
 + Viteはどんな技術?
