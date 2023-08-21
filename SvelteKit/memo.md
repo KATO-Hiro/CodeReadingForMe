@@ -633,12 +633,105 @@ export const actions = {
 
 #### Customizing use:enhance
 
++ use:enhanceを使えば、単にブラウザのネイティブな動作をエミュレートするだけでなく、さらに踏み込んだことができる。コールバックを提供することで、保留状態や楽観的なUIを追加することができます。2つのアクションに人工的な遅延を追加することで、遅いネットワークをシミュレートしてみましょう：
+
++ アイテムを作成したり削除したりすると、UIが更新されるまでに1秒かかってしまう。これを解決するには、ローカル・ステートを追加する。
+
++ 最初のuse:enhanceでトグルを作成する：
+
++ そして、データを保存している間にメッセージを表示することができる：
+
+```svelte
+<script>
+  import { fly, slide } from 'svelte/transition';
+  import { enhance } from '$app/forms';
+
+  export let data;
+  export let form;
+
+  // 追加
+  let creating = false;
+  let deleting = [];
+</script>
+
+<div class="centered">
+  <h1>todos</h1>
+
+  {#if form?.error}
+    <p class="error">{form.error}</p>
+  {/if}
+
+  <form
+    method="POST"
+    action="?/create"
+    use:enhance={() => {
+      // 更新中のフラグを立てる
+      creating = true;
+
+      // update()関数で更新
+      return async ({ update }) => {
+        await update();
+        // 更新が終了したらフラグを元に戻す
+        creating = false;
+      };
+    }}
+  >
+    <label>
+      add a todo:
+      <input
+        // 作成中のみdisableに
+        disabled={creating}
+        name="description"
+        value={form?.description ?? ''}
+        autocomplete="off"
+        required
+      />
+    </label>
+  </form>
+
+  // 更新中のみ表示
+  {#if creating}
+    <span class="saving">saving...</span>
+  {/if}
+
+  <ul class="todos">
+    // フィルタリング: 削除候補に含まれていない
+    {#each data.todos.filter((todo) => !deleting.includes(todo.id)) as todo (todo.id)}
+      <li in:fly={{ y: 20 }} out:slide>
+        <form
+          method="POST"
+          action="?/delete"
+          use:enhance={() => {
+            // 削除候補に追加
+            deleting = [...deleting, todo.id];
+
+            return async ({ update }) => {
+              await update();
+              // TODO: filterの挙動を十分に理解できていないかも
+              deleting = deleting.filter((id) => id !== todo.id);
+            };
+          }}
+        >
+          <input type="hidden" name="id" value={todo.id} />
+          <span>{todo.description}</span>
+          <button aria-label="Mark as complete" />
+        </form>
+      </li>
+    {/each}
+  </ul>
+</div>
+
+```
+
++ 削除の場合、サーバーが何かを検証するのを待つ必要はない：
+
 ## 疑問点
 
 + Viteはどんな技術?
   + SvelteKitにデフォルトで組み込まれているのはなぜ?
 + SvelteKitは、どこまでカバーしている?
   + フロントエンドのみ? or 簡単なAPIなら利用可? / APIは別のFWの方が望ましい?
+    + +page.server.js(ts)でサーバ側の処理をしているように思うが、正しく理解できている?
   + DBを扱うには?
   + ログイン機能の実装をどのように行う?
     + 公式サンプルがあれば確認
