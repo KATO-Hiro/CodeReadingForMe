@@ -360,6 +360,7 @@ export function load({ cookies }) {
 // Q: ボタンクリックで更新する方法と何が違う?
 export const actions = {
   // Q: defaultは何のデフォルトであることを表している?
+  // A: デフォルト・アクション = createであり、名前付きアクションと共存できない。
   default: async ({ cookies, request }) => {
     const data = await request.formData();
     db.createTodo(cookies.get('userid'), data.get('description'));
@@ -420,6 +421,65 @@ export function deleteTodo(userid, todoid) {
 ```
 
 #### Named form actions
+
++ 単一のアクションしかないページは、実際にはかなりまれです。ほとんどの場合、ページには複数のアクションが必要です。このアプリでは、Todoを作成するだけでは不十分で、完了したら削除したい。
+
++ まず、デフォルトのアクションを名前付きの作成アクションと削除アクションに置き換えることから始める：
+
+```svelte
+// src/routes/+page.server.js
+export const actions = {
+  // defaultからcreateに変更
+  create: async ({ cookies, request }) => {
+    const data = await request.formData();
+    db.createTodo(cookies.get('userid'), data.get('description'));
+  },
+
+  delete: async ({ cookies, request }) => {
+    const data = await request.formData();
+    db.deleteTodo(cookies.get('userid'), data.get('id'));
+  },
+};
+```
+
++ Note: デフォルト・アクションは名前付きアクションと共存できない。
+
++ <form>要素にはオプションでaction属性があり、これは<a>要素のhref属性に似ています。既存のフォームを更新して、新しいcreateアクションを指すようにします：
+
++ Note: もしアクションが別のページで定義されていれば、/todos?/createのようなものがあるでしょう。アクションはこのページにあるので、パス名を完全に省略することができます。
+
++ 次に、各Todoのフォームを作成し、そのTodoを一意に識別するための隠し<input>を作成する：
+
+```svelte
+// src/routes/+page.svelte
+<div class="centered">
+  <h1>todos</h1>
+
+  // action="?/create"でアクションを指定
+  <form method="POST" action="?/create">
+    <label>
+      add a todo:
+      <input name="description" autocomplete="off" />
+    </label>
+  </form>
+
+  <ul class="todos">
+    {#each data.todos as todo (todo.id)}
+      <li>
+        // action="?/delete"
+        <form method="POST" action="?/delete">
+          // TODOを一意に識別するための隠し<input>
+          <input type="hidden" name="id" value={todo.id} />
+          <span>{todo.description}</span>
+          <button aria-label="Mark as complete" />
+        </form>
+      </li>
+    {/each}
+  </ul>
+</div>
+```
+
+#### Validation
 
 ## 疑問点
 
