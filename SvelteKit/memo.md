@@ -1081,6 +1081,38 @@ export function load() {
 
 #### Error pages
 
++ ロード関数内で何か問題が発生すると、SvelteKitはエラーページをレンダリングします。
+
++ デフォルトのエラーページはやや味気ないものです。src/routes/+error.svelteコンポーネントを作成することでカスタマイズできます：
+
+```svelte
+<script>
+  // 前のセクションで紹介されていたStoresが使われている
+  import { page } from '$app/stores';
+  import { emojis } from './emoji.js';
+</script>
+
+<h1>{$page.status} {$page.error?.message}</h1>
+<span>
+  {emojis[$page.status] ?? emojis[500]}
+</span>
+```
+
++ error.svelteコンポーネントがルートである+layout.svelte内にレンダリングされていることに注目してください。より詳細な+error.svelteの境界を作成することができます：
+
+```svelte
+// src/routes/expected/+error.svelte
+// ページごとに独立に指定できる
+// src/route/+error.svelteの内容が上書きされている
+<h1>this error was expected</h1>
+```
+
++ このコンポーネントは/expectedに対してレンダリングされ、ルートであるsrc/routes/+error.svelteページは発生したその他のエラーに対してレンダリングされます。
+
+#### Fallback errors
+
+
+
 ## 疑問点
 
 + Viteはどんな技術?
