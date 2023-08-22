@@ -1134,6 +1134,29 @@ export function load() {
 %sveltekit.status% - HTTPステータスコード
 %sveltekit.error.message% - エラーメッセージ。
 
+#### Redirects
+
++ あるページから別のページにリダイレクトするためにthrowメカニズムを使うこともできる。
+
++ src/routes/a/+page.server.jsに新しいload関数を作成します：
+
++ aにナビゲートすると/bに直行する。
+
+```svelte
+// src/routes/a/+page.server.js
+import { redirect } from '@sveltejs/kit';
+
+export function load() {
+  throw redirect(307, '/b');
+}
+```
+
++ redirect(...)はload関数、フォームアクション、APIルート、そして後の章で説明するhandleフックの中で投げることができます。
+  + 最もよく使われるステータスコードです：
+    + 303 - フォームアクションで、送信に成功した場合
+    + 307 - 一時的なリダイレクト
+    + 308 - 永続的なリダイレクト
+
 ## 疑問点
 
 + Viteはどんな技術?
