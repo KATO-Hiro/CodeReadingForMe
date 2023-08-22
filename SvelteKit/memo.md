@@ -1002,6 +1002,42 @@ export async function DELETE({ params, cookies }) {
 
 + Q: どういうときに使うのか、イマイチ分かっていないかも
 
+#### navigating
+
++ ナビゲーション・ストアは、現在のナビゲーションを表す。ナビゲーションが開始されると - リンクのクリック、戻る/進むナビゲーション、プログラムによるgoto - ナビゲーションの値は、以下のプロパティを持つオブジェクトになります：
+  + from、to - params、route、urlプロパティを持つオブジェクト。
+  + type - ナビゲーションのタイプ、例えば link、popstate、goto。
+
++ Note: 完全なタイプ情報については、ナビゲーションのドキュメントをご覧ください。
+
++ これは、長時間実行されるナビゲーションの読み込みインジケータを表示するために使用できます。この演習では、src/routes/+page.server.jsとsrc/routes/about/+page.server.jsの両方に人工的な遅延があります。src/routes/+layout.svelteの内部で、ナビゲートストアをインポートし、ナビバーにメッセージを追加します：
+
+```svelte
+<script>
+  // インポート
+  import { page, navigating } from '$app/stores';
+</script>
+
+<nav>
+  <a href="/" aria-current={$page.url.pathname === '/'}>home</a>
+  <a href="/about" aria-current={$page.url.pathname === '/about'}>about</a>
+  <a href="/blog" aria-current={$page.url.pathname === '/blog'}>blog</a>
+  <a href="/a/deeply/nested/route" aria-current={$page.url.pathname === '/a/deeply/nested/route'}
+    >a deeply nested route</a
+  >
+
+  // 追加
+  {#if $navigating}
+    navigating to {$navigating.to?.url.pathname}
+  {/if}
+</nav>
+
+<slot />
+
+```
+
++ Q: どういうときに使うのか、イマイチ分かっていないかも
+
 ## 疑問点
 
 + Viteはどんな技術?
