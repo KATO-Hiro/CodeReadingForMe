@@ -1038,6 +1038,16 @@ export async function DELETE({ params, cookies }) {
 
 + Q: どういうときに使うのか、イマイチ分かっていないかも
 
+#### updated
+
++ 更新されたストアは、ページが最初に開かれてからアプリの新しいバージョンがデプロイされたかどうかに応じて、trueまたはfalseを含みます。これを動作させるには、svelte.config.jsでkit.version.pollIntervalを指定する必要があります。
+
++ バージョンの変更は開発中ではなく、本番環境でのみ発生します。そのため、このチュートリアルでは$updatedは常にfalseになります。
+
++ pollIntervalに関係なく、updated.check()を呼び出すことで新しいバージョンを手動でチェックできます。
+
++ Q: どういうときに使うのか、イマイチ分かっていないかも
+
 ## 疑問点
 
 + Viteはどんな技術?
