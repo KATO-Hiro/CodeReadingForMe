@@ -727,6 +727,8 @@ export const actions = {
 
 ### API routes
 
+#### GET handlers
+
 + SvelteKitで作成できるのはページだけではありません。HTTPメソッドに対応する関数をエクスポートする+server.jsファイルを追加することで、APIルートを作成することもできます：GET、PUT、POST、PATCH、DELETEです。
 
 + このアプリは、ボタンをクリックすると/roll APIルートからデータを取得します。src/routes/roll/+server.jsファイルを追加して、そのルートを作成します：
@@ -752,6 +754,7 @@ export function GET() {
 <script>
   let number;
 
+  // Q: 例外処理はしなくても良い?
   async function roll() {
     const response = await fetch('/roll');
     number = await response.json();
@@ -766,6 +769,121 @@ export function GET() {
 ```
 
 // Next.jsみたいに、api/hogeみたいな形式で呼び出せる
+// Q: Backendも同じ言語で実装できると考えれば良い?
+
+#### POST handlers
+
++ POSTのように、データを変更するハンドラを追加することもできます。ほとんどの場合、代わりにフォームアクションを使うべきです - より少ないコードしか書かずに済みますし、JavaScriptなしで動作するので、より耐障害性が高くなります。
+
++ Add a todo' <input>のキーダウンイベントハンドラの中で、データをサーバーにpostしてみましょう：
+
+```svelte
+// src/routes/+page.svelte
+<script>
+  export let data;
+</script>
+
+<div class="centered">
+  <h1>todos</h1>
+
+  <label>
+    add a todo:
+    <input
+      type="text"
+      autocomplete="off"
+      on:keydown={async (e) => {
+        if (e.key === 'Enter') {
+          const input = e.currentTarget;
+          const description = input.value;
+
+          // fetchでAPIを操作
+          // method + bodyに入れる内容 + ヘッダを指定
+          const response = await fetch('/todo', {
+            method: 'POST',
+            body: JSON.stringify({ description }),
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+
+          // レスポンスの内容からデータを取り出す
+          const { id } = await response.json();
+
+          // TODOリストの更新
+          data.todos = [
+            ...data.todos,
+            {
+              id,
+              description,
+            },
+          ];
+
+          // Q: 空にしているのはなぜ?
+          // Q: 入力後に残っている問題がある?
+          input.value = '';
+        }
+      }}
+    />
+  </label>
+
+  <ul class="todos">
+    {#each data.todos as todo (todo.id)}
+      <li>
+        <label>
+          <input
+            type="checkbox"
+            checked={todo.done}
+            on:change={async (e) => {
+              const done = e.currentTarget.checked;
+              // TODO handle change
+            }}
+          />
+        </label>
+        <span>{todo.description}</span>
+        <button
+          aria-label="Mark as complete"
+          on:click={async (e) => {
+            // TODO handle delete
+          }}
+        />
+      </li>
+    {/each}
+  </ul>
+</div>
+
+<style>
+  ...
+</style>
+```
+
+// この辺りから急に難しくなってきたように感じる
+// サンプルを写経して、なんとなく実現したいことはわかるが、自分で実装するとなるとできるか怪しい
+// ブラウザで書き換えることを想定しているせいか、予告なしに指定されたファイル以外の内容がしれっと微妙に書き換えられており、差分をチェックするのにかなり時間が掛かってフラストレーションがたまる。
+
++ ここでは、ユーザーのクッキーからuseridを使用して、/todo APIルートにJSONを投稿し、レスポンスとして新しく作成されたTodoのidを受け取っています。
+
++ src/routes/todo/+server.jsファイルに、src/lib/server/database.jsのcreateTodoを呼び出すPOSTハンドラを追加して、/todoルートを作成します：
+
+```js
+import { json } from '@sveltejs/kit';
+import * as database from '$lib/server/database.js';
+
+export async function POST({ request, cookies }) {
+  const { description } = await request.json();
+  const userid = cookies.get('userid');
+  // CRUDを呼び出し
+  const { id } = await database.createTodo(userid, description);
+
+  // jsonで返したい値 + status code
+  return json({ id }, { status: 201 });
+}
+```
+
++ ロード関数やフォームアクションと同様に、リクエストは標準的なRequestオブジェクトです; await request.json()は、イベントハンドラから投稿したデータを返します。
+
++ 201のCreatedステータスと、データベースに新しく生成されたTodoのidを持つレスポンスを返している。イベントハンドラに戻って、これを使用してページを更新できます：
+
++ Note: ページをリロードしても同じ結果が得られるような方法でしか、データを変異させるべきではありません。
 
 ## 疑問点
 
