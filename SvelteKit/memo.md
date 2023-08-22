@@ -1048,6 +1048,39 @@ export async function DELETE({ params, cookies }) {
 
 + Q: どういうときに使うのか、イマイチ分かっていないかも
 
+### Errors and redirects
+
++ SvelteKitのエラーには、想定内のエラーと想定外のエラーの2種類があります。
+
++ 期待されるエラーとは、@sveltejs/kit のエラーヘルパーを使用して作成されたもので、src/routes/expected/+page.server.js のようなものです：
+
+```svelte
+// expected
+import { error } from '@sveltejs/kit';
+
+export function load() {
+  // ステータスコード付き
+  throw error(420, 'Enhance your calm');
+}
+```
+
++ それ以外のエラー（src/routes/unexpected/+page.server.jsにあるようなエラー）は、予期せぬエラーとして扱われる：
+
+```svelte
+export function load() {
+  // あえて構文を変えている?
+  throw new Error('Kaboom!');
+}
+```
+
++ 期待されるエラーを投げるということは、SvelteKitに「心配しないで、ここで何をやっているかわかっているから」と伝えていることになります。これとは対照的に、予期しないエラーはアプリにバグがあると見なされます。予期しないエラーがスローされると、そのメッセージとスタックトレースがコンソールに記録されます。
+
++ Note: 後の章では、handleErrorフックを使ってカスタム・エラー処理を追加する方法を学ぶ。
+
++ このアプリのリンクをクリックすると、重要な違いに気づくだろう。期待されるエラーメッセージがユーザーに表示されるのに対し、予期せぬエラーメッセージは再編集され、一般的な「内部エラー」メッセージと500ステータスコードに置き換えられるのだ。エラーメッセージには機密データが含まれている可能性があるからです。
+
+#### Error pages
+
 ## 疑問点
 
 + Viteはどんな技術?
