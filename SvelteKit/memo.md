@@ -1111,7 +1111,28 @@ export function load() {
 
 #### Fallback errors
 
++ ルートレイアウトデータの読み込み中やエラーページのレンダリング中にエラーが発生するなど、本当にうまくいかない場合、SvelteKitは静的なエラーページにフォールバックします。
 
++ 新しいsrc/routes/+layout.server.jsファイルを追加して、この動作を確認してください：
+
+```js
+export function load() {
+  throw new Error('yikes');
+}
+```
+
++ フォールバック・エラー・ページをカスタマイズすることができます。src/error.htmlファイルを作成してください：
+
+```html
+<h1>Game over</h1>
+<p>Code %sveltekit.status%</p>
+<p>Code %sveltekit.error.message%</p>
+```
+
++ このファイルには以下を含めることができる：
+
+%sveltekit.status% - HTTPステータスコード
+%sveltekit.error.message% - エラーメッセージ。
 
 ## 疑問点
 
