@@ -885,6 +885,85 @@ export async function POST({ request, cookies }) {
 
 + Note: ページをリロードしても同じ結果が得られるような方法でしか、データを変異させるべきではありません。
 
+#### Other handlers
+
++ 同様に、他のHTTP動詞のハンドラも追加できる。src/routes/todo/[id]/+server.jsファイルを作成し、/todo/[id] ルートを追加します。
+
+// idが必要になるため、別ファイルで定義
+
++ ブラウザに実際のデータを返す必要はないので、204 No Contentステータスの空のResponseを返します。
+
+```js
+// src/routes/todo/[id]/+server.js
+// ディレクトリの構造はNext.jsとよく似ている
+import * as database from '$lib/server/database.js';
+
+// メソッド名は大文字と決まっている?
+export async function PUT({ params, request, cookies }) {
+  const { done } = await request.json();
+  const userid = cookies.get('userid');
+
+  // DBのCRUDを呼び出すだけ
+  await database.toggleTodo({ userid, id: params.id, done });
+  return new Response(null, { status: 204 });
+}
+
+export async function DELETE({ params, cookies }) {
+  const userid = cookies.get('userid');
+
+  await database.deleteTodo({ userid, id: params.id });
+  return new Response(null, { status: 204 });
+}
+```
+
++ これで、イベントハンドラ内でこのエンドポイントとやりとりできるようになった：
+
+```svelte
+  <ul class="todos">
+    {#each data.todos as todo (todo.id)}
+      <li>
+        <label>
+          <input
+            type="checkbox"
+            checked={todo.done}
+            on:change={async (e) => {
+              // チェックボックスの状態を取得
+              const done = e.currentTarget.checked;
+
+              // GETやPOSTと同様にfetchでAPIを叩く
+              // idを指定しているところが異なる
+              await fetch(`/todo/${todo.id}`, {
+                method: 'PUT',
+                body: JSON.stringify({ done }),
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+              });
+            }}
+          />
+        </label>
+        <span>{todo.description}</span>
+        <button
+          aria-label="Mark as complete"
+          on:click={async (e) => {
+            await fetch(`/todo/${todo.id}`, {
+              method: 'DELETE',
+            });
+
+            // 削除したデータ以外を残す
+            data.todos = data.todos.filter((t) => t !== todo);
+          }}
+        />
+      </li>
+    {/each}
+  </ul>
+```
+
++ Q: fetchでAPIを叩くときにエラー処理はしなくて良いのか?
+  + Q: 内部APIだから不要?
+  + 例示のため省略しているだけでは?
+  + 別のセクションにあるかも
+
 ## 疑問点
 
 + Viteはどんな技術?
