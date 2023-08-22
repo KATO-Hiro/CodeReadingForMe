@@ -964,6 +964,44 @@ export async function DELETE({ params, cookies }) {
   + 例示のため省略しているだけでは?
   + 別のセクションにあるかも
 
+### Stores
+
+#### page
+
++ 先に学んだように、Svelteストアは個々のコンポーネントに属さないデータを置く場所である。
+
++ SvelteKitでは、$app/storesモジュールを通じて、page、navigating、updatedの3つの読み取り専用ストアを利用できます。最もよく使うのはpageで、現在のページに関する情報を提供します：
+  + url - 現在のページのURL。
+  + params - 現在のページのパラメータ
+  + route - 現在のルートを表す id プロパティを持つオブジェクトです。
+  + status - 現在のページの HTTP ステータスコード。
+  + error - 現在のページのエラーオブジェクト（もしあれば）。
+  + data - 現在のページのデータで、すべてのロード関数の戻り値を組み合わせます。
+  + form - フォームアクションから返されるデータ
+
++ 他のストアと同様に、その名前の前に$シンボルを付けることで、コンポーネント内でその値を参照することができます。たとえば、現在のパス名を$page.url.pathnameとしてアクセスすることができます：
+
+```svelte
+// src/routes/+layout.svelte
+<script>
+  import { page } from '$app/stores';
+</script>
+
+<nav>
+  <a href="/" aria-current={$page.url.pathname === '/'}>home</a>
+  <a href="/about" aria-current={$page.url.pathname === '/about'}>about</a>
+  <a href="/blog" aria-current={$page.url.pathname === '/blog'}>blog</a>
+  <a href="/a/deeply/nested/route" aria-current={$page.url.pathname === '/a/deeply/nested/route'}
+    >a deeply nested route</a
+  >
+</nav>
+
+<slot />
+
+```
+
++ Q: どういうときに使うのか、イマイチ分かっていないかも
+
 ## 疑問点
 
 + Viteはどんな技術?
