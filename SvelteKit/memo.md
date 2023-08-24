@@ -47,6 +47,25 @@ Yes, using TypeScript syntax
 ◻ Add Prettier for code formatting
 ◻ Add Playwright for browser testing
 ◻ Add Vitest for unit testing
+
+✔ Typescript
+  Inside Svelte components, use <script lang="ts">
+
+✔ ESLint
+  https://github.com/sveltejs/eslint-plugin-svelte
+
+✔ Prettier
+  https://prettier.io/docs/en/options.html
+  https://github.com/sveltejs/prettier-plugin-svelte#options
+
+✔ Playwright
+  https://playwright.dev
+
+✔ Vitest
+  https://vitest.dev
+
+Install community-maintained integrations:
+  https://github.com/svelte-add/svelte-add
 ```
 
 + Q: Playwrightとは?
