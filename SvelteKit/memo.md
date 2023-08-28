@@ -128,6 +128,7 @@ VSCode拡張
 + アプリの異なるルートは、共通のUIを共有することがよくあります。それぞれの+page.svelteコンポーネントでそれを繰り返す代わりに、同じディレクトリ内のすべてのルートに適用される+layout.svelteコンポーネントを使うことができます。
   + // src/routes/+layout.svelteに、UIの共通部分をまとめる
   + <slot />要素は、ページ内容がレンダリングされる場所です
+    + Reactだとchildrenに相当する内容だと思われる
 
 + layout.svelteファイルは、兄弟の+page.svelte（存在する場合）を含む、すべての子ルートに適用されます。レイアウトは任意の深さまでネストできます。
 
@@ -156,7 +157,8 @@ VSCode拡張
 // src/routes/hoge/+page.server.jsで、一覧のデータをload()で取得 + 属性を対応付け
 // src/routes/hoge/+page.svelteで、一覧ページを表示
 // 詳細ページは、hoge/[slug]/の形式に変更するだけで、一覧ページとほぼ同じ
-
+// Q: [slug]は[任意の名前]でも良い or slugと決まっている?
+// A: 他の著名なOSSをいくつか見て判断する
 
 ```svelte
 // 記事一覧ページ
@@ -181,6 +183,7 @@ export function load() {
 <script>
   // Q: export letの復習が必要そう
   // Q: このdataは、data.jsと同じと考えて良いのか?
+  // A: 外部に公開している変数と思えば良い?
   export let data;
 </script>
 
@@ -235,7 +238,7 @@ export function load({ params }) {
 
 + 代わりに、src/routes/blog/+page.server.jsをsrc/routes/blog/+layout.server.jsにリネームしてみましょう。data.summariesはまだページで利用可能です。
 
-+ レイアウト（とその下のページ）は、親である+layout.server.jsからdata.summarariesを継承します。
++ レイアウト（とその下のページ）は、親である+layout.server.jsからdata.summariesを継承します。
 
 + ある投稿から別の投稿に移動するとき、私たちはその投稿のデータだけを読み込む必要があります。詳細は無効化に関するドキュメントを参照してください。
 
